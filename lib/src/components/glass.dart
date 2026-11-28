@@ -12,6 +12,12 @@ enum GlassLevel {
 
   /// A heavy tint that is still not opaque. For surfaces that carry text.
   strong,
+
+  /// The bars' own glass: the bottom bar's tint, and on Liquid Glass the
+  /// bottom bar's glass as the theme sets it, untinted. For a panel that
+  /// floats beside the bars and should read as one of them — a player or
+  /// a route in progress above the tab bar.
+  bar,
 }
 
 /// A frosted-glass surface: a translucent tint over a blurred, saturated
@@ -124,20 +130,39 @@ class Glass extends StatelessWidget {
     final base = glass.color ?? theme.colorScheme.card;
     final tint =
         color ??
-        base.withValues(
+        switch (level) {
+          GlassLevel.bar =>
+            theme.bottomNavigationBarTheme.backgroundColor ??
+                base.withValues(alpha: base.a * (glass.opacity ?? .7)),
           // Multiplied, so a scheme whose card is already translucent keeps
           // that.
-          alpha:
-              base.a *
-              switch (level) {
-                GlassLevel.regular => glass.opacity ?? .7,
-                GlassLevel.strong => glass.strongOpacity ?? .9,
-              },
-        );
+          GlassLevel.regular => base.withValues(
+            alpha: base.a * (glass.opacity ?? .7),
+          ),
+          GlassLevel.strong => base.withValues(
+            alpha: base.a * (glass.strongOpacity ?? .9),
+          ),
+        };
 
     if (frosted &&
         color == null &&
         LiquidGlass.isActive(context, glass.liquidGlass)) {
+      if (level == GlassLevel.bar) {
+        // The bottom bar's glass, with nothing of its own on it.
+        return LiquidGlassSurface(
+          radius: radius.topLeft.x,
+          child: Container(
+            width: width,
+            height: height,
+            constraints: constraints,
+            alignment: alignment,
+            padding: effectiveBorder.dimensions.add(
+              padding ?? EdgeInsets.zero,
+            ),
+            child: child,
+          ),
+        );
+      }
       // The same tint, blur and saturation as the frosted surface, so the
       // two read as one design; Liquid Glass adds its rim, highlights and
       // refraction on top. Left to the iOS presets, a panel was clear

@@ -298,10 +298,26 @@ componentTheme.liquidGlass)` at build: never a window width, never cached.
   iPhone's Safari the prototype had the most late frames of every edge
   measured. Under `flutter test` a frame that takes the snapshot does not
   complete, so the drawing is checked in a browser only.
-- **A phone's or tablet's primary bar keeps `gap(sm)` above its toolbar
-  where there is no status bar** (a browser, a phone frame in a docs
-  page), glass or not (`appBarTopInset`); a desktop's frosted bar does
-  not. `AppBar.heightOf` counts it.
+- **A filled bar's toolbar has room around its buttons; a glass bar
+  floats.** `appBarStyleHeight` floors a frosted or solid bar's toolbar
+  at an icon button plus `gap(sm)` above and below (60 on a phone, where
+  the style says iOS's 44: una's buttons draw a disc that met the bar's
+  edges), and such a bar keeps no margin above it without a status bar.
+  A Liquid Glass bar keeps the style's height and `gap(sm)` above it
+  (`appBarTopInset`). `AppBar.heightOf` counts both; tests use
+  `test/app_bar_metrics.dart`.
+- **A scaffold tells its app bar about its banner in the bar's
+  constraints** (`ScaffoldBarConstraints`, internal): the banner is laid
+  out first, and a Liquid Glass `AppBar` reads `below` in a
+  `LayoutBuilder` and reaches its scroll edge down under the banner. An
+  inherited value would be a frame late.
+- **A bar's surface follows the scroll** (`_ScrolledUnder`): up over the
+  first 32 points, eased only for a jump of more than a quarter.
+- **A page's own bar finds an enclosing scaffold's drawer**
+  (`_scaffoldWith` in `app_bar_layout.dart`): a destination with its own
+  navigator inside a shell scaffold, each page with its own `Scaffold`,
+  gets the shell's menu button on its root and a back button above. The
+  recipe with `go_router` is in the app-structure guide.
 - **A bar picks its buttons' look; apps do not ask which material it is
   on.** `Button.variant`/`IconButton.variant` are nullable, and the
   toolbar puts an internal `BarButtonScope` (`bar_button_scope.dart`,
@@ -947,6 +963,20 @@ weight, another font, at or above the reference — is a plain `Icon`.
   `test/src/components/glass_shadow_web_test.dart`. CI runs every
   `*_web_test.dart` with `--platform chrome`; the VM suite skips them
   (`@TestOn('browser')`).
+- **A decoration's own border radius shapes every state.** `Decorator`
+  gives a caller's `decoration.border.borderRadius` to the focused and
+  error borders and grows the ring round it, unless the caller shaped
+  those too: the theme's are baked at the theme's radius, and a pill
+  field had a rounded-rectangle ring (`decorator_ring_test.dart`).
+- **On the web `drawRSuperellipse` moves a shader with the shape.** It
+  draws about the shape's centre, so a gradient fill showed half of
+  itself. `UnaRoundedSuperellipseBorder.toBorder` fills a shader through
+  a clip there; paint code fills a gradient superellipse with
+  `clipRSuperellipse` + `drawRect` (the example's `UnaMarkPainter`).
+- **A held finger inside a board item is the board's.** The item is
+  under a `LongPressTaken` (internal), and a `ContextMenuRegion` inside
+  opens on neither a touch tap nor a long press by default: the card
+  rose and its menu came up too. Such an item gets a "…" button.
 - `Button` centres its label (`TextAlign.center` in its DefaultTextStyle).
   Anything button-based that should read as a row — menu items — must merge
   `TextAlign.start` back in below the button.
@@ -1507,9 +1537,9 @@ ticks only for a finger's changes, as the board and the wheel do.
   collapsed bar** (`_BarSlot.edge`), and the bar's clip reaches
   `_edgeOverhang` below it on glass. `Positioned.fill` over the full
   expanded box showed only the edge's top once collapsed, cut on a line.
-  A pinned picture (`pinBackground`) is blurred through a reused
-  `ImageFilterLayer`, veiled, and on glass masked out over its lowest
-  `_edgeOverhang` (`ShaderMaskLayer`) into the edge below.
+  A picture is never kept behind a collapsed toolbar: `pinBackground`
+  (veiled, and on glass blurred) was taken out as a state nobody should
+  ship — a grey slab filled, nothing to stand on clear.
 - **A scroll-driven bar is written at layout and read at paint**
   (`AppBarSurfaceBehavior.whenScrolled`, `SliverAppBar`): its listeners are
   render objects, never builders. A header's semantics merge into the
@@ -1689,7 +1719,11 @@ ticks only for a finger's changes, as the board and the wheel do.
   from springs (`RenderToastStack`). A toast past `maxVisible` is not
   painted, hit-tested or in the semantics tree. Removal happens from the
   fade controller's status listener, and an exit uses `animateBack`.
-  Each toast's box is 8 larger for the corner close button.
+  Each toast's box is 8 larger for its focus ring. There is no close
+  button: every pointer kind swipes (a mouse and a trackpad too), and F6
+  gives a toast with no control the focus itself (its node is
+  `canRequestFocus` only while it has it), with `DismissShortcut` around
+  that node, not inside it, so Escape reaches it.
 - Toasts are outside every route's focus scope: F6 (`Toaster.shortcut`)
   moves the focus to them, and leaving gives it back with
   `unfocus(disposition: UnfocusDisposition.previouslyFocusedChild)`. The

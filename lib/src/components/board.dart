@@ -15,6 +15,7 @@ import 'package:una/src/theme/motion.dart';
 import 'package:una/src/theme/theme.dart';
 import 'package:una/src/utils/debug_check.dart';
 import 'package:una/src/utils/haptics.dart';
+import 'package:una/src/utils/long_press_taken.dart';
 import 'package:una/src/utils/shadow.dart';
 
 part 'board_column.dart';

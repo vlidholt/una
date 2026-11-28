@@ -453,15 +453,21 @@ void main() {
           }
           // The action is a button, not a place: it has no label.
           expect(find.text('Compose'), findsNothing);
-          // The lens is behind the icon, not the label.
+          // Docked, the lens is behind the icon, not the label; floating,
+          // it takes in the label as well, as the Liquid Glass lens does.
           final lens = tester.getRect(
             find.byWidgetPredicate(
               (w) => w is MovingIndicatorTarget && w.selected,
             ),
           );
           final home = tester.getRect(find.text('Home'));
-          expect(lens.bottom, lessThanOrEqualTo(home.top));
-          expect(lens.height, theme.bottomNavigationBarTheme.itemHeight);
+          if (floating) {
+            expect(lens.top, lessThan(home.top));
+            expect(lens.bottom, greaterThanOrEqualTo(home.bottom));
+          } else {
+            expect(lens.bottom, lessThanOrEqualTo(home.top));
+            expect(lens.height, theme.bottomNavigationBarTheme.itemHeight);
+          }
           await tester.pumpWidget(const SizedBox.shrink());
         }
       }

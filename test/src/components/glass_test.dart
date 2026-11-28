@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:una/src/liquid_glass/liquid_glass.dart';
 import 'package:una/una.dart';
 
 import '../../decoration_finders.dart';
@@ -99,6 +101,41 @@ void main() {
 
       expect(tint, theme.colorScheme.card.withValues(alpha: .9));
       expect(tint.a, lessThan(1));
+    });
+
+    testWidgets("the bar level is the bottom bar's glass: its tint frosted, "
+        "and on Liquid Glass the theme's glass with nothing of its own", (
+      tester,
+    ) async {
+      await pumpUna(
+        tester,
+        const Center(
+          child: Glass(level: GlassLevel.bar, child: Text('Hi')),
+        ),
+      );
+      final theme = themeOf(tester, find.byType(Glass));
+      expect(
+        surfaceOf(tester).color,
+        theme.bottomNavigationBarTheme.backgroundColor,
+      );
+
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      try {
+        await pumpUna(
+          tester,
+          const Center(
+            child: Glass(level: GlassLevel.bar, child: Text('Hi')),
+          ),
+          formFactor: FormFactor.mobile,
+        );
+        final surface = tester.widget<LiquidGlassSurface>(
+          find.byType(LiquidGlassSurface),
+        );
+        expect(surface.tint, isNull);
+        expect(surface.blur, isNull);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
     });
 
     testWidgets("a translucent card colour keeps its own alpha: the level's "

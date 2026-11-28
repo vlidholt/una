@@ -526,6 +526,11 @@ class BottomNavigationBar extends StatelessWidget {
       if (fit < itemWidth) itemWidth = fit < 0 ? 0 : fit;
     }
     final itemRadius = isFloating ? theme.radii.full : theme.radii.lg;
+    // On a floating bar the lens and the hover wash take in the label as
+    // well, as the Liquid Glass bar's lens does: a pill behind the icon
+    // alone, with the label hanging under it, read as two things. A
+    // docked bar keeps Material's pill behind the icon.
+    final wholeItem = labeled && isFloating;
 
     // The lens: one pill behind the selected destination, painted by the
     // row and travelling between them.
@@ -566,64 +571,66 @@ class BottomNavigationBar extends StatelessWidget {
               (isSelected
                   ? bar.selectedForegroundColor ?? theme.colorScheme.tint
                   : bar.foregroundColor ?? theme.colorScheme.foregroundSubtle);
+          // A cross-fade, not `Color.lerp`: from nothing to the wash that
+          // one passes through a half-opaque dark grey, which is the flash
+          // a tap on a destination used to make.
+          Widget filled(Widget child) => AnimatedFill(
+            color: color,
+            borderRadius: itemRadius,
+            child: child,
+          );
+          final glyph = Center(
+            child: ExcludeSemantics(
+              child: icon(ink, iconSize ?? bar.iconSize ?? 26),
+            ),
+          );
           final box = SizedBox(
             width: width ?? (isFloating ? itemWidth : null),
             height: bar.itemHeight ?? 48,
-            // A cross-fade, not `Color.lerp`: from nothing to the wash
-            // that one passes through a half-opaque dark grey, which is
-            // the flash a tap on a destination used to make.
-            child: AnimatedFill(
-              color: color,
-              borderRadius: itemRadius,
-              child: Center(
-                child: ExcludeSemantics(
-                  child: icon(ink, iconSize ?? bar.iconSize ?? 26),
-                ),
-              ),
-            ),
+            child: wholeItem && selected != null ? glyph : filled(glyph),
           );
+          Widget content = !labeled
+              ? box
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  spacing: _labelGap,
+                  children: [
+                    box,
+                    // Under the lens, not on it. The action has none: it
+                    // is a button, not a place.
+                    Container(
+                      width: isFloating ? itemWidth : null,
+                      // A little air between the label and the bar's
+                      // rounded edge.
+                      padding: const EdgeInsets.only(bottom: _labelGap),
+                      child: AnimatedColorBuilder(
+                        color: selected == null ? const Color(0x00000000) : ink,
+                        duration: motion.fast,
+                        curve: motion.standard,
+                        builder: (context, color, _) => Text(
+                          selected == null ? '' : label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: labelStyle.copyWith(color: color),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+          if (wholeItem && selected != null) content = filled(content);
           return FocusRing(
             visible: states.contains(WidgetState.focused),
             borderRadius: itemRadius,
             inset: true,
-            child: !labeled
-                ? box
-                : Column(
-                    mainAxisSize: MainAxisSize.min,
-                    spacing: _labelGap,
-                    children: [
-                      box,
-                      // Under the lens, not on it. The action has none: it
-                      // is a button, not a place.
-                      Container(
-                        width: isFloating ? itemWidth : null,
-                        // A little air between the label and the bar's
-                        // rounded edge.
-                        padding: const EdgeInsets.only(bottom: _labelGap),
-                        child: AnimatedColorBuilder(
-                          color: selected == null
-                              ? const Color(0x00000000)
-                              : ink,
-                          duration: motion.fast,
-                          curve: motion.standard,
-                          builder: (context, color, _) => Text(
-                            selected == null ? '' : label,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                            style: labelStyle.copyWith(color: color),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+            child: content,
           );
         },
       );
       if (selected != null) {
         // Outside the pressable, not inside it: a press shrinks the icon,
         // not the lens under it.
-        child = labeled
+        child = labeled && !wholeItem
             ? Stack(
                 children: [
                   // Behind the icon only; the label sits below the lens.

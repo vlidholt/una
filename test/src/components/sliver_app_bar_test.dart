@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -97,18 +99,27 @@ void main() {
       .opacity
       .value;
 
-  // The margin a phone's bar keeps above its toolbar where there is no
-  // status bar, as in these tests.
-  double topInset(WidgetTester tester) =>
-      themeOf(tester, bar()).layoutTheme.gap(GapSize.sm);
+  // A filled bar keeps no margin above its toolbar where there is no
+  // status bar, as in these tests: its toolbar has room of its own.
+  double topInset(WidgetTester tester) => 0;
+
+  // The filled toolbar's height: the theme's, at least an icon button with
+  // the small gap above and below.
+  double barHeight(WidgetTester tester) {
+    final theme = themeOf(tester, bar());
+    return math.max(
+      theme.appBarTheme.height!,
+      theme.style.iconButtonSize + 2 * theme.layoutTheme.gap(GapSize.sm),
+    );
+  }
 
   // How far down the toolbar reaches: its margin and its height.
   double toolbarHeight(WidgetTester tester) =>
-      topInset(tester) + themeOf(tester, bar()).appBarTheme.height!;
+      topInset(tester) + barHeight(tester);
 
   // Where the middle of the toolbar's row is.
   double toolbarCenter(WidgetTester tester) =>
-      topInset(tester) + themeOf(tester, bar()).appBarTheme.height! / 2;
+      topInset(tester) + barHeight(tester) / 2;
 
   group('SliverAppBar.large', () {
     Widget large({
@@ -117,11 +128,9 @@ void main() {
       double? expandedHeight,
       bool pinned = true,
       bool stretch = true,
-      bool pinBackground = true,
       Widget? subtitle,
       List<Widget> actions = const [],
     }) => SliverAppBar.large(
-      pinBackground: pinBackground,
       title: const Text('Library'),
       subtitle: subtitle,
       backgroundColor: _fill,
@@ -219,7 +228,6 @@ void main() {
         'surface over it as it does, instead of being cut off at the '
         "toolbar's edge", (tester) async {
       await pump(tester, page(large(subtitle: const Text('128 albums'))));
-      final theme = themeOf(tester, bar());
       final toolbar = toolbarHeight(tester);
       final title = tester.getRect(largeTitle('Library'));
       // The title's top line six points under the toolbar.
@@ -249,23 +257,14 @@ void main() {
       // The fill is laid on once: the toolbar reads as the collapsed bar.
       await scrollTo(tester, 400);
       expect(await sampler.pixel(tester, const Offset(300, 20)), _fill);
-      expect(theme.appBarTheme.height! + topInset(tester), toolbar);
+      expect(barHeight(tester) + topInset(tester), toolbar);
     });
 
-    testWidgets('over a pinned picture the titles dissolve before the '
-        'toolbar, and on Liquid Glass the picture is blurred only as they go', (
+    testWidgets('over a picture the titles go under the toolbar like any '
+        'other, and nothing is blurred, on Liquid Glass either', (
       tester,
     ) async {
       const picture = Color(0xff00ff00);
-      await pump(
-        tester,
-        page(
-          large(
-            expandedHeight: 200,
-            background: const ColoredBox(color: picture),
-          ),
-        ),
-      );
       bool blurred() {
         var found = false;
         void visit(Layer? first) {
@@ -279,25 +278,20 @@ void main() {
         return found;
       }
 
-      final toolbar = toolbarHeight(tester);
-      final title = tester.getRect(largeTitle('Library'));
-      // Most of the way, with the titles not yet at the toolbar: sharp.
-      await scrollTo(tester, title.top - toolbar - 4);
-      expect(blurred(), isFalse);
-      // The title halfway under where the toolbar's edge is: nothing of it
-      // above that edge, where the picture stays.
-      await scrollTo(tester, title.top - toolbar + title.height / 2);
-      final above = await sampler.pixel(
+      await pump(
         tester,
-        Offset(title.left + 4, toolbar - 2),
+        page(
+          large(
+            expandedHeight: 200,
+            background: const ColoredBox(color: picture),
+          ),
+        ),
       );
-      expect(above.g, greaterThan(.5));
-      // A frosted bar veils the picture and ends on its hairline: a blur
-      // would only stop on a hard line there.
       await scrollTo(tester, 400);
       expect(blurred(), isFalse);
+      // Collapsed, the bar is its own surface: the picture has gone.
+      expect(await sampler.pixel(tester, const Offset(300, 20)), _fill);
 
-      // On Liquid Glass, with no fill of its own, the bar blurs it.
       debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
       LiquidGlass.debugHasShaderFilters = true;
       try {
@@ -311,7 +305,10 @@ void main() {
           ),
         );
         await scrollTo(tester, 400);
-        expect(blurred(), isTrue);
+        // The picture is not kept behind the toolbar: what is there is the
+        // page, under the scroll edge.
+        final sample = await sampler.pixel(tester, const Offset(300, 20));
+        expect(sample.g, lessThan(.9));
       } finally {
         debugDefaultTargetPlatformOverride = null;
         LiquidGlass.debugHasShaderFilters = null;
@@ -569,26 +566,7 @@ void main() {
       final fading = await sampler.pixel(tester, Offset(300, toolbar + 20));
       expect(fading.g, lessThan(middle.g));
 
-      // Collapsed, the picture stays behind the toolbar, veiled in the
-      // page colour: neither the bar's own fill nor the bare picture.
-      await scrollTo(tester, 400);
-      final pinned = await sampler.pixel(tester, const Offset(300, 20));
-      expect(pinned, isNot(_fill));
-      expect(pinned.g, greaterThan(themed.g * .5));
-      expect(pinned.g, lessThan(picture.g));
-      expect(pinned.r, greaterThan(.3));
-
-      // Unpinned, it fades out and the collapsed bar takes its surface.
-      await pump(
-        tester,
-        page(
-          large(
-            expandedHeight: 200,
-            pinBackground: false,
-            background: const ColoredBox(color: picture),
-          ),
-        ),
-      );
+      // Collapsed, it has faded out and the bar is its own surface.
       await scrollTo(tester, 400);
       expect(await sampler.pixel(tester, const Offset(300, 20)), _fill);
     });
@@ -655,7 +633,10 @@ void main() {
       try {
         await pump(tester, page(large(expandedHeight: 200)));
         await scrollTo(tester, 600);
-        final toolbar = toolbarHeight(tester);
+        // A glass bar keeps iOS's height, with a margin above it.
+        final theme = themeOf(tester, bar());
+        final toolbar =
+            theme.layoutTheme.gap(GapSize.sm) + theme.appBarTheme.height!;
         final edge = find.byType(LiquidGlassScrollEdge);
         expect(edge, findsOneWidget);
         // The collapsed bar (with the glass bar's margin above its
@@ -735,7 +716,7 @@ void main() {
       );
       expect(
         tester.getRect(smallTitle('Library')).center.dy,
-        44 + themeOf(tester, bar()).appBarTheme.height! / 2,
+        44 + barHeight(tester) / 2,
       );
       final style = tester.binding.renderViews.first.debugLayer!
           .find<SystemUiOverlayStyle>(const Offset(195, 10))!;

@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -79,7 +78,6 @@ class SliverAppBar extends StatefulWidget {
   }) : _large = false,
        subtitle = null,
        background = null,
-       pinBackground = true,
        expandedHeight = null,
        stretch = false;
 
@@ -94,7 +92,6 @@ class SliverAppBar extends StatefulWidget {
     this.automaticallyImplyActions = true,
     this.bottom,
     this.background,
-    this.pinBackground = true,
     this.expandedHeight,
     this.stretch = true,
     this.pinned = true,
@@ -152,16 +149,13 @@ class SliverAppBar extends StatefulWidget {
   /// image, a gradient. The titles stand on the page colour, which rises
   /// into the picture just above them, so they read on any picture in
   /// either brightness.
+  ///
+  /// It goes with the page as the bar collapses, fading out as it goes,
+  /// and the collapsed bar is the bar it always is: its surface, or on
+  /// Liquid Glass the page blurred under it. A picture kept behind a
+  /// collapsed toolbar is never right: veiled it is a grey slab, and left
+  /// clear the toolbar has nothing to stand on.
   final Widget? background;
-
-  /// Whether [background] stays behind the toolbar once the bar has
-  /// collapsed, as a profile's cover does: as the bar collapses the picture
-  /// is veiled in the page colour, so the small title and the buttons read
-  /// on it. On Liquid Glass it is blurred as well and its lower edge
-  /// dissolves into the blurred page below; on a frosted or solid bar it
-  /// stays sharp and ends on the hairline.
-  /// False fades it out, and the collapsed bar takes the bar's surface.
-  final bool pinBackground;
 
   /// The height of the area under the toolbar of a large bar while it is
   /// fully expanded. Defaults to the theme's, and then to the height of the
@@ -201,7 +195,10 @@ class SliverAppBar extends StatefulWidget {
   /// `AppBar.systemOverlayStyle`.
   final SystemUiOverlayStyle? systemOverlayStyle;
 
-  /// The widest the content grows. Defaults to the theme's page width.
+  /// The widest the bar's content box grows, its horizontal [padding]
+  /// included, before it is centred. Defaults to the theme's: the page's
+  /// width plus its margins, so the bar lines up with a `PageContainer`.
+  /// A screen whose columns are wider sets the bar to match them.
   final double? maxWidth;
 
   /// The gap between the toolbar's parts.
@@ -379,7 +376,10 @@ class _SliverAppBarState extends State<SliverAppBar>
       child: AppBarToolbar(
         // A floor, as in an `AppBar`: a line of scaled text that needs more
         // room gets it.
-        height: appBarToolbarHeight(context, widget.height ?? bar.height ?? 64),
+        height: appBarToolbarHeight(
+          context,
+          appBarStyleHeight(context, widget.height, liquid: liquid),
+        ),
         leading: leading,
         // Over a picture a bare glyph would be lost: the buttons are
         // discs, there and once the bar has collapsed over the picture.
@@ -531,10 +531,7 @@ class _SliverAppBarState extends State<SliverAppBar>
         hairline: widget.showBorder ? 1 : 0,
         reduceMotion: motion.reduced,
         titleInset: titleInset,
-        pinBackground: widget.pinBackground && !filledOverPicture,
         backgroundBelowToolbar: filledOverPicture,
-        fadeBackground: liquid,
-        veil: scheme.background,
         // On Liquid Glass the scroll edge covers the titles instead.
         cover: liquid ? null : fill,
         children: [
@@ -1232,11 +1229,6 @@ _RenderTitleMark? _markIn(RenderObject root, _TitlePart part) {
 /// How far a bar's scroll edge reaches below it on Liquid Glass.
 const _edgeOverhang = 24.0;
 
-/// How far below the toolbar's lower edge titles that cannot go under the
-/// bar's surface (a pinned picture stays behind the toolbar instead)
-/// dissolve, so they never meet a line there.
-const _titleDissolve = 20.0;
-
 enum _BarSlot { edge, background, expanded, toolbar, bottom }
 
 class _BarPartData extends ContainerBoxParentData<RenderBox> {
@@ -1268,10 +1260,7 @@ class _SliverBarBody extends MultiChildRenderObjectWidget {
     required this.hairline,
     required this.reduceMotion,
     required this.titleInset,
-    required this.pinBackground,
     required this.backgroundBelowToolbar,
-    required this.fadeBackground,
-    required this.veil,
     required this.cover,
     required super.children,
   });
@@ -1280,10 +1269,7 @@ class _SliverBarBody extends MultiChildRenderObjectWidget {
   final double hairline;
   final bool reduceMotion;
   final double titleInset;
-  final bool pinBackground;
   final bool backgroundBelowToolbar;
-  final bool fadeBackground;
-  final Color veil;
   final Color? cover;
 
   @override
@@ -1293,10 +1279,7 @@ class _SliverBarBody extends MultiChildRenderObjectWidget {
     reduceMotion: reduceMotion,
     textDirection: Directionality.of(context),
     titleInset: titleInset,
-    pinBackground: pinBackground,
     backgroundBelowToolbar: backgroundBelowToolbar,
-    fadeBackground: fadeBackground,
-    veil: veil,
     cover: cover,
   );
 
@@ -1310,10 +1293,7 @@ class _SliverBarBody extends MultiChildRenderObjectWidget {
       ..reduceMotion = reduceMotion
       ..textDirection = Directionality.of(context)
       ..titleInset = titleInset
-      ..pinBackground = pinBackground
       ..backgroundBelowToolbar = backgroundBelowToolbar
-      ..fadeBackground = fadeBackground
-      ..veil = veil
       ..cover = cover;
   }
 }
@@ -1328,30 +1308,14 @@ class _RenderSliverBarBody extends RenderBox
     required bool reduceMotion,
     required TextDirection textDirection,
     required double titleInset,
-    required bool pinBackground,
     required bool backgroundBelowToolbar,
-    required bool fadeBackground,
-    required Color veil,
     required Color? cover,
   }) : _cover = cover,
        _hairline = hairline,
        _reduceMotion = reduceMotion,
        _textDirection = textDirection,
        _titleInset = titleInset,
-       _pinBackground = pinBackground,
-       _backgroundBelowToolbar = backgroundBelowToolbar,
-       _fadeBackground = fadeBackground,
-       _veil = veil;
-
-  /// Whether the picture stays behind the collapsed toolbar.
-  bool get pinBackground => _pinBackground;
-  bool _pinBackground;
-  set pinBackground(bool value) {
-    if (value == _pinBackground) return;
-    _pinBackground = value;
-    // Whether the titles go under the bar's surface depends on it.
-    markNeedsLayout();
-  }
+       _backgroundBelowToolbar = backgroundBelowToolbar;
 
   /// The bar's surface, laid over the toolbar's part of the titles as they
   /// go under it; null where something else covers them (the scroll edge
@@ -1363,14 +1327,6 @@ class _RenderSliverBarBody extends RenderBox
     _cover = value;
     markNeedsLayout();
   }
-
-  /// Whether the titles go under the toolbar, covered by the bar's surface
-  /// or its scroll edge, rather than dissolving at its edge over a picture
-  /// that stays behind it.
-  bool get _titlesGoUnder =>
-      !(_pinBackground && _part(_BarSlot.background) != null);
-
-  final _dissolve = LayerHandle<ShaderMaskLayer>();
 
   /// Whether the picture starts below the toolbar, which has a fill of
   /// its own, instead of reaching up behind it.
@@ -1384,37 +1340,6 @@ class _RenderSliverBarBody extends RenderBox
 
   /// The top of the picture's box: under the toolbar or behind it.
   double get _backgroundTop => _backgroundBelowToolbar ? _toolbarHeight : 0;
-
-  /// Whether a pinned picture's lower edge dissolves into what is below
-  /// the bar (Liquid Glass) rather than ending on the bar's hairline.
-  bool get fadeBackground => _fadeBackground;
-  bool _fadeBackground;
-  set fadeBackground(bool value) {
-    if (value == _fadeBackground) return;
-    _fadeBackground = value;
-    markNeedsPaint();
-  }
-
-  /// The page colour a pinned picture is veiled in as the bar collapses.
-  Color get veil => _veil;
-  Color _veil;
-  set veil(Color value) {
-    if (value == _veil) return;
-    _veil = value;
-    markNeedsPaint();
-  }
-
-  // Reused frame to frame while a pinned picture is blurred.
-  final _blur = LayerHandle<ImageFilterLayer>();
-  final _mask = LayerHandle<ShaderMaskLayer>();
-
-  @override
-  void dispose() {
-    _blur.layer = null;
-    _mask.layer = null;
-    _dissolve.layer = null;
-    super.dispose();
-  }
 
   final _BarScroll scroll;
 
@@ -1556,7 +1481,7 @@ class _RenderSliverBarBody extends RenderBox
       titleTop: titleTop,
       titleLine: titleLine,
       titlesBottom: titlesBottom,
-      coverTop: expanded > 0 && _titlesGoUnder && _cover != null ? toolbar : 0,
+      coverTop: expanded > 0 && _cover != null ? toolbar : 0,
     );
     size = constraints.constrain(
       Size(width, toolbar + expanded + bottom + hairline),
@@ -1642,16 +1567,16 @@ class _RenderSliverBarBody extends RenderBox
       math.max(_expandedHeight + _lift, 0),
     );
 
-    final goUnder = expanded != null && _titlesGoUnder;
+    final goUnder = expanded != null;
     final edge = _part(_BarSlot.edge);
-    // Behind a pinned picture; over titles that go under the bar, which it
-    // blurs and fades into the page as they do.
+    // Under a bar with no large title the edge is behind everything; over
+    // titles that go under the bar it is painted after them, and blurs and
+    // fades them into the page as they do.
     if (edge != null && !goUnder) context.paintChild(edge, offset);
 
     // The large titles thin out as they go under the toolbar.
     final titleFade = scroll.titles;
-    final pin = _pinBackground;
-    if (background != null && (pin || progress < 1)) {
+    if (background != null && progress < 1) {
       final top = _backgroundTop;
       final shown = Rect.fromLTRB(
         0,
@@ -1659,97 +1584,31 @@ class _RenderSliverBarBody extends RenderBox
         size.width,
         math.max(window.bottom, top),
       );
-      final alpha = pin ? 255 : ((1 - progress) * 255).round().clamp(0, 255);
+      final alpha = ((1 - progress) * 255).round().clamp(0, 255);
       final scrim = expanded == null ? null : _scrimIn(expanded);
-      void paintImage(PaintingContext context, Offset offset) =>
-          _paintMoved(context, offset, background, _backgroundTransform());
       void paintPicture(PaintingContext context, Offset offset) {
         context.pushClipRect(needsCompositing, offset, shown, (
           context,
           offset,
         ) {
-          // Pinned, the picture is blurred as it collapses, so the toolbar
-          // stands on its colours rather than on its detail.
-          // As the titles go: blurred while they were still on it, the
-          // picture read as a smeared block around them.
-          // Only on Liquid Glass, where the bar has no fill of its own: a
-          // frosted or solid bar veils the picture and ends on its
-          // hairline, where a blur would only stop on a hard line.
-          final sigma = pin && _fadeBackground && !reduceMotion
-              ? 10 * (1 - titleFade)
-              : 0.0;
-          if (sigma > .5) {
-            _blur.layer = (_blur.layer ?? ImageFilterLayer())
-              ..imageFilter = ImageFilter.blur(
-                sigmaX: sigma,
-                sigmaY: sigma,
-                tileMode: TileMode.clamp,
-              );
-            context.pushLayer(_blur.layer!, paintImage, offset);
-          } else {
-            _blur.layer = null;
-            paintImage(context, offset);
-          }
-          final canvas = context.canvas;
-          if (pin && progress > 0) {
-            // A frosted or solid bar does not blur the picture, so it veils
-            // it more: collapsed, it reads as the bar, with the picture
-            // faint under it.
-            final veil = _fadeBackground ? .4 : .8;
-            canvas.drawRect(
-              shown.shift(offset),
-              Paint()
-                ..color = _veil.withValues(alpha: _veil.a * veil * progress),
-            );
-          }
+          _paintMoved(context, offset, background, _backgroundTransform());
           // The page colour behind the titles, where they are, going with
           // them.
           if (scrim != null && titleFade > 0) {
-            canvas
+            context.canvas
               ..save()
               ..translate(offset.dx, offset.dy)
               ..transform(_expandedTransform(expanded!).storage);
-            scrim.paintScrim(canvas, expanded, opacity: titleFade);
-            canvas.restore();
+            scrim.paintScrim(context.canvas, expanded, opacity: titleFade);
+            context.canvas.restore();
           }
         });
       }
 
-      // On Liquid Glass a collapsing picture's lower edge dissolves into
-      // the blurred page under the bar instead of ending on a line.
-      void paintFaded(PaintingContext context, Offset offset) {
-        if (!(pin && _fadeBackground && progress > 0)) {
-          _mask.layer = null;
-          paintPicture(context, offset);
-          return;
-        }
-        const fade = _edgeOverhang;
-        final band = Rect.fromLTRB(
-          0,
-          math.max(shown.bottom - fade, 0),
-          shown.width,
-          shown.bottom,
-        );
-        _mask.layer = (_mask.layer ?? ShaderMaskLayer())
-          ..maskRect = shown.shift(offset)
-          ..blendMode = BlendMode.dstIn
-          ..shader = LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: const [
-              Color(0xFFFFFFFF),
-              Color(0xFFFFFFFF),
-              Color(0x00FFFFFF),
-            ],
-            stops: [0, band.top / math.max(shown.height, 1), 1],
-          ).createShader(Offset.zero & shown.size);
-        context.pushLayer(_mask.layer!, paintPicture, offset);
-      }
-
       if (alpha >= 255) {
-        paintFaded(context, offset);
+        paintPicture(context, offset);
       } else if (alpha > 0) {
-        context.pushOpacity(offset, alpha, paintFaded);
+        context.pushOpacity(offset, alpha, paintPicture);
       }
     }
 
@@ -1757,49 +1616,19 @@ class _RenderSliverBarBody extends RenderBox
       final alpha = (titleFade * 255).round();
       // Going under the bar, the titles are cut at its top, not at the
       // toolbar's lower edge: the toolbar's part of them is covered below.
-      final clip = goUnder
-          ? Rect.fromLTRB(0, 0, size.width, window.bottom)
-          : window;
-      void paintMoved(PaintingContext context, Offset offset) => _paintMoved(
-        context,
-        offset,
-        expanded,
-        _expandedTransform(expanded),
-      );
-      void paintClipped(PaintingContext context, Offset offset) =>
-          context.pushClipRect(needsCompositing, offset, clip, paintMoved);
-      void paintTitle(PaintingContext context, Offset offset) {
-        // Nothing to dissolve while the titles are clear of the toolbar:
-        // no layer for it at rest.
-        final near =
-            !scroll._titled ||
-            scroll.collapse - scroll.stretch > scroll.titleTop - _titleDissolve;
-        if (goUnder || !near) {
-          _dissolve.layer = null;
-          paintClipped(context, offset);
-          return;
-        }
-        // Over a pinned picture they dissolve as they near the toolbar,
-        // instead of meeting a line there.
-        final stop = (_titleDissolve / math.max(window.height, 1)).clamp(
-          0.0,
-          1.0,
-        );
-        _dissolve.layer = (_dissolve.layer ?? ShaderMaskLayer())
-          ..maskRect = window.shift(offset)
-          ..blendMode = BlendMode.dstIn
-          ..shader = LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: const [
-              Color(0x00FFFFFF),
-              Color(0xFFFFFFFF),
-              Color(0xFFFFFFFF),
-            ],
-            stops: [0, stop, 1],
-          ).createShader(Offset.zero & window.size);
-        context.pushLayer(_dissolve.layer!, paintClipped, offset);
-      }
+      final clip = Rect.fromLTRB(0, 0, size.width, window.bottom);
+      void paintTitle(PaintingContext context, Offset offset) =>
+          context.pushClipRect(
+            needsCompositing,
+            offset,
+            clip,
+            (context, offset) => _paintMoved(
+              context,
+              offset,
+              expanded,
+              _expandedTransform(expanded),
+            ),
+          );
 
       if (alpha >= 255) {
         paintTitle(context, offset);

@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:una/src/components/app_bar_layout.dart';
 import 'package:una/una.dart';
 
+import '../../app_bar_metrics.dart';
 import '../../una_harness.dart';
 
 void main() {
@@ -63,12 +64,10 @@ void main() {
     ) async {
       for (final formFactor in FormFactor.values) {
         final theme = ThemeData(formFactor: formFactor);
-        final style = theme.appBarTheme.height!;
-        // A phone's or a tablet's bar keeps a margin above its toolbar
-        // where there is no status bar, as here.
-        final inset = formFactor == FormFactor.desktop
-            ? 0
-            : theme.layoutTheme.gap(GapSize.sm);
+        final style = filledToolbarHeight(theme);
+        // A filled bar keeps no margin above its toolbar where there is no
+        // status bar, as here: its toolbar has room of its own.
+        const inset = 0;
         for (final scale in [.85, 1.0]) {
           await tester.pumpWidget(const SizedBox.shrink());
           final reported = await pumpBar(tester, scale, formFactor: formFactor);

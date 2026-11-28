@@ -733,11 +733,16 @@ class _BoardItemState<T extends Object> extends State<_BoardItem<T>> {
     // from scratch each time.
     Widget child = Theme(
       data: style.itemTheme,
-      child: Builder(
-        builder: (context) => config.itemBuilder(
-          context,
-          widget.item,
-          BoardItemDetails<T>(column: column, index: widget.index),
+      // A finger held on the item lifts it: a menu region inside must not
+      // open on the same press.
+      child: LongPressTaken(
+        taken: draggable && config.dragTrigger == BoardDragTrigger.item,
+        child: Builder(
+          builder: (context) => config.itemBuilder(
+            context,
+            widget.item,
+            BoardItemDetails<T>(column: column, index: widget.index),
+          ),
         ),
       ),
     );

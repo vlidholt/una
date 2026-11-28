@@ -46,6 +46,33 @@ class SpinnerButtonsExample extends StatelessWidget {
             ],
           ),
         ),
+        // A status pill in the page's ink, the halo in the colour of its
+        // text.
+        DecoratedBox(
+          decoration: BoxDecoration(
+            color: theme.colorScheme.foreground,
+            borderRadius: theme.radii.full,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 10, 18, 10),
+            child: IconTheme(
+              data: IconThemeData(color: theme.colorScheme.background),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                spacing: 10,
+                children: [
+                  const Spinner.halo(size: 24),
+                  Text(
+                    'Working',
+                    style: theme.textTheme.small.copyWith(
+                      color: theme.colorScheme.background,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }

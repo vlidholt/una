@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:una/src/components/app_bar_layout.dart';
 import 'package:una/una.dart';
 
+import '../../app_bar_metrics.dart';
 import '../../frame_sampler.dart';
 import '../../una_harness.dart';
 
@@ -152,7 +153,7 @@ void main() {
         padding: const EdgeInsets.only(top: 44),
       );
       final theme = themeOf(tester, find.byType(AppBar));
-      final toolbar = theme.appBarTheme.height!;
+      final toolbar = filledToolbarHeight(theme);
       final bar = tester.getRect(find.byType(AppBar));
       final bottom = tester.getRect(find.byKey(const Key('bottom')));
       expect(bar.height, 44 + toolbar + 48 + 1);

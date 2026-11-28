@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:una/una.dart';
 
-/// The four looks of a spinner, small and large.
+/// The five looks of a spinner, small and large.
 class SpinnerVariantsExample extends StatelessWidget {
   const SpinnerVariantsExample({super.key});
 

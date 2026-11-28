@@ -5,6 +5,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:una/src/components/app_bar.dart';
+import 'package:una/src/components/app_bar_layout.dart';
 import 'package:una/src/components/navigation_bar.dart';
 import 'package:una/src/components/scaffold_drawer.dart';
 import 'package:una/src/i18n/localizations_delegate.dart';
@@ -920,16 +921,21 @@ class _ScaffoldLayout extends MultiChildLayoutDelegate {
       maxHeight: size.height,
     );
 
-    // The top: the app bar, then the banner under it.
+    // The top: the app bar, then the banner under it. The banner is laid
+    // out first: a bar of Liquid Glass reaches its scroll edge down under
+    // it, and is told how far in its constraints.
+    final banner = layoutChild(_Slot.banner, bar).height;
     var top = safeArea.top;
     var topInset = top;
     if (hasChild(_Slot.appBar)) {
-      final height = layoutChild(_Slot.appBar, bar).height;
+      final height = layoutChild(
+        _Slot.appBar,
+        ScaffoldBarConstraints.from(bar, below: banner),
+      ).height;
       positionChild(_Slot.appBar, Offset.zero);
       top = height;
       topInset = appBarInset ?? height;
     }
-    final banner = layoutChild(_Slot.banner, bar).height;
     positionChild(_Slot.banner, Offset(0, top));
     top += banner;
     topInset += banner;

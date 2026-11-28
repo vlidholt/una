@@ -72,6 +72,50 @@ class Decorator extends StatelessWidget {
           fallbackSecondaryBorder ?? effectiveDecoration.secondaryBorder;
     }
 
+    // The shape is the control's. A radius the caller gives the
+    // decoration's border — a pill-shaped field, say — is the radius of the
+    // focused and error borders too, and the ring goes round it, unless the
+    // caller shaped those as well: the theme's are baked at its own radius.
+    final ownRadius = decoration?.border?.borderRadius;
+    if (ownRadius != null) {
+      final stateRadius = hasError
+          ? decoration?.errorBorder?.borderRadius
+          : focused
+          ? decoration?.focusedBorder?.borderRadius
+          : null;
+      final current = border;
+      if (stateRadius == null &&
+          current != null &&
+          current is! UnaRoundedSuperellipseBorder) {
+        border = current.copyWith(borderRadius: ownRadius);
+      }
+      final ring = secondaryBorder;
+      final ownRing =
+          (hasError
+                  ? decoration?.secondaryErrorBorder
+                  : focused
+                  ? decoration?.secondaryFocusedBorder
+                  : decoration?.secondaryBorder)
+              ?.borderRadius;
+      if (ring != null && ownRing == null) {
+        // Concentric: each corner grows by the ring's distance from it, as
+        // the theme's own ring does from the theme's radius.
+        final grow = ring.offset ?? 0;
+        Radius around(Radius corner) => corner == Radius.zero
+            ? Radius.zero
+            : Radius.elliptical(corner.x + grow, corner.y + grow);
+        final r = ownRadius.resolve(textDirection);
+        secondaryBorder = ring.copyWith(
+          borderRadius: BorderRadius.only(
+            topLeft: around(r.topLeft),
+            topRight: around(r.topRight),
+            bottomLeft: around(r.bottomLeft),
+            bottomRight: around(r.bottomRight),
+          ),
+        );
+      }
+    }
+
     // The shadows go on the wrapper rather than the decoration itself so they
     // are clipped to the control's own outline; see [ShadowDecoration].
     final primaryDecoration = ShadowDecoration(

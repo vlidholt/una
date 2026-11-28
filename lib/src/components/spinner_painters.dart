@@ -71,6 +71,85 @@ abstract class SpinnerPainter extends CustomPainter {
       oldDelegate.frame != frame;
 }
 
+/// A ring of dots with a wave of light running round it.
+///
+/// Eight dots sit on a ring that drifts slowly the other way. Once per
+/// [cycle] a swell runs round clockwise: a dot rises sharply as it nears,
+/// is largest as it passes — stretched a little along the ring, as if by
+/// its speed — and settles back over the next few, so two or three are
+/// lit at once, each in a soft glow of its own colour. One colour
+/// throughout: the glow is the dot's colour, blurred and faint.
+class HaloSpinnerPainter extends SpinnerPainter {
+  /// Creates the halo painter.
+  HaloSpinnerPainter({
+    required super.color,
+    required super.frame,
+    super.repaint,
+  });
+
+  @override
+  Duration get cycle => const Duration(milliseconds: 1100);
+
+  @override
+  Duration get restingTime => const Duration(milliseconds: 180);
+
+  static const _dots = 8;
+
+  /// How much of the lap behind the swell a dot takes to settle, and how
+  /// sharply it rises ahead of it.
+  static const _settle = 4.2;
+  static const _rise = 22.0;
+
+  /// How fast the ring drifts against the swell, in laps per second.
+  static const _drift = .08;
+
+  @override
+  void paintFrame(Canvas canvas, double radius, double seconds, Color color) {
+    final lap = seconds / (cycle.inMicroseconds / 1e6);
+    final swell = (lap - lap.floorToDouble()) * math.pi * 2;
+    final drift = -seconds * _drift * math.pi * 2;
+    final orbit = radius * .6;
+    final small = radius * .062;
+    final large = radius * .17;
+    final glow = Paint();
+    final dot = Paint()..color = color;
+    for (var i = 0; i < _dots; i++) {
+      final place = i / _dots * math.pi * 2;
+      // How far the swell has gone past this dot, as a share of a lap.
+      final behind = ((swell - place) % (math.pi * 2)) / (math.pi * 2);
+      final lit = math.max(
+        math.exp(-behind * _settle),
+        math.exp(-(1 - behind) * _rise),
+      );
+      final angle = place + drift - math.pi / 2;
+      final centre = Offset.fromDirection(angle, orbit);
+      final r = small + (large - small) * lit;
+      if (lit > .12) {
+        glow
+          ..color = color.withValues(alpha: color.a * .38 * lit)
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, r * 1.1);
+        canvas.drawCircle(centre, r * 1.9, glow);
+      }
+      // Stretched along the ring by up to a third as it passes.
+      final stretch = 1 + .32 * lit;
+      dot.color = color.withValues(alpha: color.a * (.5 + .5 * lit));
+      canvas
+        ..save()
+        ..translate(centre.dx, centre.dy)
+        ..rotate(angle + math.pi / 2)
+        ..drawOval(
+          Rect.fromCenter(
+            center: Offset.zero,
+            width: 2 * r * stretch,
+            height: 2 * r / math.sqrt(stretch),
+          ),
+          dot,
+        )
+        ..restore();
+    }
+  }
+}
+
 /// Three comets chasing each other round a circle.
 ///
 /// Each dot runs a lap per [cycle], slow at the top and fast at the bottom,

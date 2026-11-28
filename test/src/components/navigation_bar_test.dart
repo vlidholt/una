@@ -821,6 +821,7 @@ void main() {
       ValueChanged<int>? onDestinationSelected,
       NavigationAction? action,
       bool? floating,
+      bool? showLabels,
       Map<int, int> badgeCounts = const {},
       double bottomInset = 0,
     }) {
@@ -834,10 +835,38 @@ void main() {
             onDestinationSelected: onDestinationSelected,
             action: action,
             floating: floating,
+            showLabels: showLabels,
           ),
         ),
       );
     }
+
+    testWidgets('floating with labels, the lens takes in the label too; '
+        'docked, it is behind the icon only', (tester) async {
+      Rect lens() => tester.getRect(
+        find.byWidgetPredicate(
+          (w) => w is MovingIndicatorTarget && w.selected,
+        ),
+      );
+      await pumpUna(
+        tester,
+        bar(floating: true, showLabels: true),
+        formFactor: FormFactor.mobile,
+      );
+      final label = tester.getRect(find.text('Home'));
+      expect(lens().top, lessThan(label.top));
+      expect(lens().bottom, greaterThanOrEqualTo(label.bottom));
+
+      await pumpUna(
+        tester,
+        bar(floating: false, showLabels: true),
+        formFactor: FormFactor.mobile,
+      );
+      expect(
+        lens().bottom,
+        lessThanOrEqualTo(tester.getRect(find.text('Home')).top),
+      );
+    });
 
     NavigationAction action([VoidCallback? onPressed]) => NavigationAction(
       icon: const Icon(PhosphorIconsRegular.plus, key: Key('action-icon')),

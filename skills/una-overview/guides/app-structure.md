@@ -136,9 +136,9 @@ the scroll in paint, so a collapse builds and lays out nothing.
   which moves at half the page's speed; `expandedHeight:` sizes it. The
   titles stand on the page colour rising into the picture, so they read
   on any photo.
-- `pinBackground: true` (the default) keeps the picture behind the
-  collapsed toolbar, blurred and veiled, as a profile's cover does;
-  `false` fades it out and the collapsed bar takes the bar's surface.
+- The picture goes with the page and fades out as the bar collapses;
+  the collapsed bar is the bar's own surface. A picture is never kept
+  behind a collapsed toolbar.
 - In a browser on Liquid Glass the toolbar stays filled and the picture
   starts below it. Nothing to handle.
 - Wrap each action of a large bar in a `RepaintBoundary` when the bar
@@ -342,6 +342,95 @@ Navigator.of(context).push(
   side by side on a desktop, the detail pushed over the list on a phone,
   where the back gesture and button call `onDetailClosed`. An inbox or a
   file browser is one; do not build the two layouts yourself.
+
+### A stack per destination, and URLs
+
+An app with a bottom bar (or a rail, or a top bar of destinations) keeps
+a stack of pages per destination, as iOS and Material apps do: a pushed
+page slides in over its destination's root with a back button, the bar
+stays, and switching destinations keeps each stack where it was. With
+URLs on the web, use a router: `UnaApp.router` and `go_router`'s
+`StatefulShellRoute`. The split is the same as Material's.
+
+- **The shell owns the app's chrome**: one `NavigationScaffold` (or a
+  `Scaffold` with a `bottomNavigationBar`) with the destinations, the
+  drawer and end drawer, a FAB, a bottom sheet. Its `body` is the
+  branches' navigators, in a `DestinationStack` so a switch animates. On
+  a phone give it no app bar (`showMobileAppBar: false`).
+- **Each page owns its header**: its own `Scaffold` with its own `AppBar`
+  or `SliverAppBar.large`, its banner and its content. Leave `leading`
+  out: the bar shows the back button on a pushed page, and on a
+  destination's root the menu button for the shell's drawer — it finds
+  the drawer on the scaffold around the navigator.
+- **Every route returns an `UnaPage`** from `pageBuilder`, for una's
+  transition and back gestures (go_router only knows Material's and
+  Cupertino's apps; anything else gets no transition).
+- The page's scaffold sits inside the shell's: its body is inset by the
+  shell's bars through the `MediaQuery` padding, so a list scrolls under
+  a floating bottom bar and stops above it, as it would in one scaffold.
+
+```dart
+final router = GoRouter(
+  initialLocation: '/trips',
+  routes: [
+    StatefulShellRoute(
+      builder: (context, state, shell) => NavigationScaffold(
+        showMobileAppBar: false,
+        destinations: destinations,
+        selectedIndex: shell.currentIndex,
+        // Again on the current destination: back to its root.
+        onDestinationSelected: (i) =>
+            shell.goBranch(i, initialLocation: i == shell.currentIndex),
+        body: shell,
+      ),
+      navigatorContainerBuilder: (context, shell, children) =>
+          DestinationStack(
+            index: shell.currentIndex,
+            builders: [for (final child in children) (_) => child],
+          ),
+      branches: [
+        StatefulShellBranch(routes: [
+          GoRoute(
+            path: '/trips',
+            pageBuilder: (context, state) =>
+                UnaPage(key: state.pageKey, child: const TripsPage()),
+            routes: [
+              GoRoute(
+                path: ':id',
+                pageBuilder: (context, state) => UnaPage(
+                  key: state.pageKey,
+                  child: TripPage(id: state.pathParameters['id']!),
+                ),
+              ),
+            ],
+          ),
+        ]),
+        // …a branch per destination.
+      ],
+    ),
+  ],
+);
+
+// A page: its own scaffold and bar; the back button comes by itself.
+class TripPage extends StatelessWidget {
+  // …
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: Text(trip.name)),
+    body: ListView(children: [/* … */]),
+  );
+}
+```
+
+`context.push('/trips/lofoten')` pushes in the current branch with the
+address following; a link to `/trips/lofoten` opens the trip with a back
+button to the list; the browser's back and forward walk the stack. A
+route that should cover the bottom bar (a compose screen) takes the root
+navigator's key as its `parentNavigatorKey`, and `UnaPage(fullscreenDialog:
+true)` slides it up with a close button.
+
+Without a router, `DestinationStack` with a `Navigator` per builder does
+the same, minus the URLs.
 
 ## Tabs and segments
 

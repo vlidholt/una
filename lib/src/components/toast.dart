@@ -9,19 +9,16 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:una/src/components/spinner.dart';
-import 'package:una/src/i18n/localizations_delegate.dart';
 import 'package:una/src/icons/phosphor_icons.dart';
 import 'package:una/src/liquid_glass/liquid_glass.dart';
 import 'package:una/src/raw_components/pressable.dart';
 import 'package:una/src/theme/data.dart';
-import 'package:una/src/theme/form_factor.dart';
 import 'package:una/src/theme/motion.dart';
 import 'package:una/src/theme/theme.dart';
 import 'package:una/src/theme/themes/shadows.dart';
 import 'package:una/src/utils/backdrop.dart';
 import 'package:una/src/utils/border.dart';
 import 'package:una/src/utils/dismiss_shortcut.dart';
-import 'package:una/src/utils/hit_area.dart';
 import 'package:una/src/utils/overlay_insets.dart';
 import 'package:una/src/utils/pop_in.dart';
 import 'package:una/src/utils/shadow.dart';
@@ -66,8 +63,9 @@ enum ToastVariant {
 ///
 /// A toast is a floating surface like a popover — glass in a style whose
 /// popovers are — and takes its look from `ThemeData.toastTheme`. On a
-/// desktop it sits in the bottom end corner with a close button that shows
-/// on hover; on a phone it spans the bottom of the page and is swiped away.
+/// desktop it sits in the bottom end corner, on a phone it spans the bottom
+/// of the page; either way it is swiped away (with a finger, a mouse or a
+/// trackpad) and has no close button.
 ///
 /// The widget is also usable on its own, as a picture of a toast in a
 /// settings page or a design review; it is then as wide as its parent lets
@@ -119,8 +117,8 @@ class Toast extends StatelessWidget {
   /// says: finding the action takes longer than any time out.
   final Duration? duration;
 
-  /// Whether the user can dismiss the toast: by swiping it away, with its
-  /// close button, or with Escape while it has the focus. A toast that is
+  /// Whether the user can dismiss the toast: by swiping it away, or with
+  /// Escape while it has the focus. A toast that is
   /// not dismissible still leaves when its [duration] is over.
   final bool dismissible;
 
@@ -342,13 +340,9 @@ class Toast extends StatelessWidget {
 
 const _fallbackWidth = 356.0;
 
-/// How far the close button reaches past the corner of its toast. Every
-/// toast in the stack is laid out in a box this much larger on each side,
-/// so the button is inside something that takes pointers.
+/// The room around a toast: every toast in the stack is laid out in a box
+/// this much larger on each side, for the focus ring drawn outside it.
 const _overhang = 8.0;
-
-/// The side of the close button.
-const _closeSize = 20.0;
 
 /// How far, in logical pixels, a toast has to be dragged to be dismissed
 /// when it is let go at rest, and how fast a flick has to be to dismiss it
@@ -383,11 +377,12 @@ const _swipeVelocity = 500.0;
 /// left again. More than [maxVisible] wait unseen and come back as the ones
 /// in front of them leave.
 ///
-/// On a touch screen a toast is swiped away, towards the edge it sits
-/// against or sideways; with a mouse it has a close button on hover. The
+/// A toast is swiped away, towards the edge it sits against or sideways,
+/// with a finger, a mouse or a trackpad; it has no close button. The
 /// toasts are above the navigator, outside the page's focus scope, so Tab
 /// does not wander into them: [shortcut] (F6) moves the focus to the front
-/// toast and back, Tab then walks the toasts' controls, and Escape dismisses
+/// toast (its action, or the toast itself) and back, Tab then walks the
+/// toasts' controls, and Escape dismisses
 /// the toast that has the focus and gives the focus back to the page.
 ///
 /// An app built on `UnaApp` already has one. Under another app widget,
@@ -658,9 +653,10 @@ class ToasterState extends State<Toaster> with TickerProviderStateMixin {
     return focusToasts();
   }
 
-  /// Moves the focus to the first control of the toast in front that has
-  /// one — its action, or its close button — and returns whether there was
-  /// one. What [Toaster.shortcut] does.
+  /// Moves the focus to the toast in front — to its first control, its
+  /// action, if it has one, otherwise to the toast itself, where Escape
+  /// dismisses it — and returns whether there was a toast to take it. What
+  /// [Toaster.shortcut] does.
   bool focusToasts() {
     for (final entry in _entries.reversed) {
       if (!entry.present) continue;
@@ -668,6 +664,13 @@ class ToasterState extends State<Toaster> with TickerProviderStateMixin {
         node.requestFocus();
         return true;
       }
+      // With no control, the toast itself takes the focus — while it has
+      // it, and only if there is something for Escape to do.
+      if (!entry.toast.dismissible) continue;
+      entry.focusNode
+        ..canRequestFocus = true
+        ..requestFocus();
+      return true;
     }
     return false;
   }
@@ -884,12 +887,9 @@ class ToasterState extends State<Toaster> with TickerProviderStateMixin {
     _syncExpansion();
   }
 
-  void _setEntryHovered(_ToastEntry entry, bool value) {
-    if (entry.hovered == value || !mounted) return;
-    setState(() => entry.hovered = value);
-  }
-
   void _setEntryFocused(_ToastEntry entry, bool value) {
+    // Taken only from [focusToasts], never by Tab or a click.
+    if (!value) entry.focusNode.canRequestFocus = false;
     if (entry.focused == value || !mounted) return;
     setState(() => entry.focused = value);
     _syncTimers();
@@ -1035,7 +1035,6 @@ class ToasterState extends State<Toaster> with TickerProviderStateMixin {
                   entry: entry,
                   toast: entry.toast,
                   leaving: entry.leaving,
-                  closeVisible: entry.hovered || entry.focused,
                   state: this,
                 ),
             ],
@@ -1111,8 +1110,9 @@ class _ToastEntry {
   /// Everything that moves this toast, for the stack to repaint on.
   late final Listenable motion;
 
-  /// Around the toast's controls: says whether the focus is in the toast,
-  /// and never takes it itself.
+  /// Around the toast's controls: says whether the focus is in the toast.
+  /// It takes the focus itself only from `focusToasts`, for a toast with
+  /// no control.
   final focusNode = FocusNode(
     debugLabel: 'Toast',
     canRequestFocus: false,
@@ -1150,7 +1150,6 @@ class _ToastEntry {
   final gone = Completer<void>();
 
   Timer? timer;
-  bool hovered = false;
   bool focused = false;
   bool dragging = false;
   Axis? dragAxis;
@@ -1228,14 +1227,13 @@ class _ToastSlotScope extends InheritedWidget {
       contentOpacity != oldWidget.contentOpacity;
 }
 
-/// A toast as the stack holds it: with its gestures, its focus, its
-/// semantics and its close button.
+/// A toast as the stack holds it: with its gestures, its focus and its
+/// semantics.
 class _ToastSlot extends StatelessWidget {
   const _ToastSlot({
     required this.entry,
     required this.toast,
     required this.leaving,
-    required this.closeVisible,
     required this.state,
     super.key,
   });
@@ -1243,7 +1241,6 @@ class _ToastSlot extends StatelessWidget {
   final _ToastEntry entry;
   final Toast toast;
   final bool leaving;
-  final bool closeVisible;
   final ToasterState state;
 
   @override
@@ -1255,162 +1252,80 @@ class _ToastSlot extends StatelessWidget {
 
     return _ToastSlotData(
       entry: entry,
-      child: MouseRegion(
-        onEnter: (_) => state._setEntryHovered(entry, true),
-        onExit: (_) => state._setEntryHovered(entry, false),
-        child: ExcludeFocus(
-          // A toast on its way out is not there to be focused.
-          excluding: leaving,
+      child: ExcludeFocus(
+        // A toast on its way out is not there to be focused.
+        excluding: leaving,
+        // Around the toast's own node, which has the focus itself when the
+        // toast has no control.
+        child: DismissShortcut(
+          isActive: () => toast.dismissible && !entry.leaving,
+          onDismiss: dismiss,
           child: Focus(
             focusNode: entry.focusNode,
             onFocusChange: (focused) => state._setEntryFocused(entry, focused),
-            child: DismissShortcut(
-              isActive: () => toast.dismissible && !entry.leaving,
-              onDismiss: dismiss,
-              child: Stack(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(_overhang),
-                    // The toast may be glass, which an opacity layer around
-                    // it would switch off; see [BackdropFade].
-                    child: BackdropFadeHost(
-                      opacity: entry.opacity,
-                      child: Semantics(
-                        container: true,
-                        liveRegion: !alert,
-                        role: alert ? SemanticsRole.alert : null,
-                        onDismiss: toast.dismissible ? dismiss : null,
-                        child: RawGestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          gestures: {
-                            PanGestureRecognizer:
-                                GestureRecognizerFactoryWithHandlers<
-                                  PanGestureRecognizer
-                                >(
-                                  () => PanGestureRecognizer(
-                                    // A mouse has the close button; a drag
-                                    // with one is for selecting text.
-                                    supportedDevices: const {
-                                      PointerDeviceKind.touch,
-                                      PointerDeviceKind.stylus,
-                                      PointerDeviceKind.invertedStylus,
-                                    },
-                                  ),
-                                  (recognizer) => recognizer
-                                    ..onStart = ((_) => state._dragStart(entry))
-                                    ..onUpdate = ((details) =>
-                                        state._dragUpdate(entry, details))
-                                    ..onEnd = ((details) => state._dragEnd(
-                                      entry,
-                                      details.velocity,
-                                    ))
-                                    ..onCancel = (() => state._dragEnd(
-                                      entry,
-                                      Velocity.zero,
-                                    )),
-                                ),
-                          },
-                          child: _ToastSlotScope(
-                            contentOpacity: entry.contentOpacity,
-                            child: toast,
+            child: Padding(
+              padding: const EdgeInsets.all(_overhang),
+              // The toast may be glass, which an opacity layer around
+              // it would switch off; see [BackdropFade].
+              child: BackdropFadeHost(
+                opacity: entry.opacity,
+                child: Semantics(
+                  container: true,
+                  liveRegion: !alert,
+                  role: alert ? SemanticsRole.alert : null,
+                  onDismiss: toast.dismissible ? dismiss : null,
+                  child: RawGestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    gestures: {
+                      PanGestureRecognizer:
+                          GestureRecognizerFactoryWithHandlers<
+                            PanGestureRecognizer
+                          >(
+                            () => PanGestureRecognizer(
+                              // Every pointer: a toast has no close
+                              // button, and a mouse or a trackpad
+                              // swipes it away as a finger does.
+                              supportedDevices: const {
+                                PointerDeviceKind.touch,
+                                PointerDeviceKind.stylus,
+                                PointerDeviceKind.invertedStylus,
+                                PointerDeviceKind.mouse,
+                                PointerDeviceKind.trackpad,
+                              },
+                            ),
+                            (recognizer) => recognizer
+                              ..onStart = ((_) => state._dragStart(entry))
+                              ..onUpdate = ((details) =>
+                                  state._dragUpdate(entry, details))
+                              ..onEnd = ((details) => state._dragEnd(
+                                entry,
+                                details.velocity,
+                              ))
+                              ..onCancel = (() => state._dragEnd(
+                                entry,
+                                Velocity.zero,
+                              )),
                           ),
-                        ),
+                    },
+                    child: _ToastSlotScope(
+                      contentOpacity: entry.contentOpacity,
+                      // Shown when the toast itself has the focus,
+                      // which it takes when it has no control.
+                      child: FocusRing(
+                        visible:
+                            entry.focused && entry.focusNode.hasPrimaryFocus,
+                        borderRadius:
+                            Theme.of(context).toastTheme.borderRadius ??
+                            Theme.of(context).radii.lg,
+                        child: toast,
                       ),
                     ),
                   ),
-                  if (toast.dismissible)
-                    PositionedDirectional(
-                      top: 0,
-                      start: 0,
-                      // Drawn at 20, it takes pointers over the minimum
-                      // target (24, 44 on a phone) without moving. It sits
-                      // in the slot's corner, which takes no pointers
-                      // beyond it, so it grows into the toast.
-                      child: HitArea(
-                        minSize:
-                            Theme.of(context).formFactor == FormFactor.mobile
-                            ? 44
-                            : 24,
-                        alignment: AlignmentDirectional.topStart,
-                        child: FadeTransition(
-                          opacity: entry.opacity,
-                          child: _CloseButton(
-                            visible: closeVisible,
-                            onPressed: dismiss,
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
+                ),
               ),
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// The round button on the corner of a toast. It is always there for the
-/// keyboard and shows when the toast is pointed at or has the focus. While
-/// it is hidden a screen reader is not told of it: the toast itself carries
-/// the dismiss action.
-class _CloseButton extends StatelessWidget {
-  const _CloseButton({required this.visible, required this.onPressed});
-
-  final bool visible;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final toastTheme = theme.toastTheme;
-    final border = toastTheme.border?.top?.color ?? scheme.border;
-    return SpringBuilder(
-      value: visible ? 1 : 0,
-      builder: (context, t, child) => IgnorePointer(
-        ignoring: !visible,
-        child: Opacity(
-          opacity: t.clamp(0.0, 1.0),
-          child: Transform.scale(scale: .8 + .2 * t, child: child),
-        ),
-      ),
-      child: Pressable(
-        onPressed: onPressed,
-        semanticLabel: UnaLocalizations.of(context).toast.dismiss,
-        builder: (context, states) {
-          final active =
-              states.contains(WidgetState.hovered) ||
-              states.contains(WidgetState.pressed);
-          return FocusRing(
-            visible: states.contains(WidgetState.focused),
-            borderRadius: const BorderRadius.all(Radius.circular(_closeSize)),
-            child: SizedBox.square(
-              dimension: _closeSize,
-              child: AnimatedFill(
-                // Opaque: it lies half over the toast's edge and half over
-                // the page.
-                color: active
-                    ? Color.alphaBlend(scheme.muted, scheme.popover)
-                    : scheme.popover,
-                borderColor: border,
-                borderRadius: const BorderRadius.all(
-                  Radius.circular(_closeSize),
-                ),
-                child: Center(
-                  child: PhosphorIcon(
-                    PhosphorIconsBold.x,
-                    size: 10,
-                    color: active
-                        ? scheme.popoverForeground
-                        : scheme.mutedForeground,
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
       ),
     );
   }

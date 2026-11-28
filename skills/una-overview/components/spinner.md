@@ -1,6 +1,6 @@
 # Spinner
 
-A small animated loading indicator for a button or a line of text. Four looks: the ring, orbit, morph and goo.
+A small animated loading indicator for a button or a line of text. Five looks: the ring, orbit, morph, goo and halo.
 
 ## Sizes
 
@@ -31,13 +31,13 @@ class SpinnerBasicExample extends StatelessWidget {
 
 ## Variants
 
-`variant:` picks a look, or use the named constructors: `Spinner.orbit()` is three comets chasing round a circle, bunching up and flinging apart; `Spinner.morph()` a shape that twists from clover to sun to pill and on; `Spinner.goo()` a drop that splits into three droplets on stretching necks and pulls itself back together. Each reads at 16 points and holds up at any size. Under reduced motion a spinner holds still and breathes.
+`variant:` picks a look, or use the named constructors: `Spinner.orbit()` is three comets chasing round a circle, bunching up and flinging apart; `Spinner.morph()` a shape that twists from clover to sun to pill and on; `Spinner.goo()` a drop that splits into three droplets on stretching necks and pulls itself back together; `Spinner.halo()` a ring of dots with a wave of light running round it, each dot swelling and glowing as it passes. Each reads at 16 points and holds up at any size. Under reduced motion a spinner holds still and breathes.
 
 ```dart
 import 'package:flutter/widgets.dart';
 import 'package:una/una.dart';
 
-/// The four looks of a spinner, small and large.
+/// The five looks of a spinner, small and large.
 class SpinnerVariantsExample extends StatelessWidget {
   const SpinnerVariantsExample({super.key});
 
@@ -124,6 +124,33 @@ class SpinnerButtonsExample extends StatelessWidget {
               const Spinner.goo(),
               Text('Uploading 3 photos…', style: theme.textTheme.muted),
             ],
+          ),
+        ),
+        // A status pill in the page's ink, the halo in the colour of its
+        // text.
+        DecoratedBox(
+          decoration: BoxDecoration(
+            color: theme.colorScheme.foreground,
+            borderRadius: theme.radii.full,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 10, 18, 10),
+            child: IconTheme(
+              data: IconThemeData(color: theme.colorScheme.background),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                spacing: 10,
+                children: [
+                  const Spinner.halo(size: 24),
+                  Text(
+                    'Working',
+                    style: theme.textTheme.small.copyWith(
+                      color: theme.colorScheme.background,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ],

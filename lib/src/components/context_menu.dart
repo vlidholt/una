@@ -34,6 +34,7 @@ import 'package:una/src/utils/extensions/text_style.dart';
 import 'package:una/src/utils/focus_visibility.dart';
 import 'package:una/src/utils/gesture_detector.dart';
 import 'package:una/src/utils/haptics.dart';
+import 'package:una/src/utils/long_press_taken.dart';
 import 'package:una/src/utils/mouse_area.dart';
 import 'package:una/src/utils/pop_in.dart';
 import 'package:una/src/utils/provider.dart';
@@ -203,15 +204,20 @@ class _ContextMenuRegionState extends State<ContextMenuRegion> {
 
   @override
   Widget build(BuildContext context) {
+    // Not where a held finger already lifts something to drag it.
     final effectiveLongPressEnabled =
         widget.longPressEnabled ??
-        (defaultTargetPlatform == TargetPlatform.android ||
-            defaultTargetPlatform == TargetPlatform.iOS);
+        ((defaultTargetPlatform == TargetPlatform.android ||
+                defaultTargetPlatform == TargetPlatform.iOS) &&
+            !LongPressTaken.of(context));
 
+    // A touch inside a lifting item is the item's: a tap opens it, a held
+    // finger lifts it — and a tap's down comes first in a long press.
     final effectiveTapEnabled =
         widget.tapEnabled ??
-        (defaultTargetPlatform == TargetPlatform.android ||
-            defaultTargetPlatform == TargetPlatform.iOS);
+        ((defaultTargetPlatform == TargetPlatform.android ||
+                defaultTargetPlatform == TargetPlatform.iOS) &&
+            !LongPressTaken.of(context));
 
     final isWindows = defaultTargetPlatform == TargetPlatform.windows;
 

@@ -101,33 +101,6 @@ void main() {
       await elapse(tester, const Duration(seconds: 8));
       expect(find.text('Deleted'), findsNothing);
     });
-
-    for (final (formFactor, side) in [
-      (FormFactor.desktop, 24.0),
-      (FormFactor.mobile, 44.0),
-    ]) {
-      testWidgets('the close button takes a press across $side points on '
-          '${formFactor.name}', (tester) async {
-        final toaster = await pumpToaster(tester, formFactor: formFactor);
-        toaster.show(const Toast(title: Text('Saved')));
-        await _frames(tester, 40);
-        // It shows while the toast has the focus.
-        await tester.sendKeyEvent(LogicalKeyboardKey.f6);
-        await _frames(tester, 40);
-        final close = find.bySemanticsLabel('Dismiss');
-        final icon = find.byIcon(PhosphorIconsBold.x);
-        expect(icon, findsOneWidget);
-        expect(close, findsWidgets);
-        final drawn = tester.getRect(
-          find.ancestor(of: icon, matching: find.byType(SizedBox)).first,
-        );
-        expect(drawn.size, const Size(20, 20));
-        // Towards the toast, outside what is drawn but inside the target.
-        await tester.tapAt(drawn.topLeft + Offset(side - 2, side - 2));
-        await _frames(tester, 40);
-        expect(find.text('Saved'), findsNothing);
-      });
-    }
   });
 
   group('Command', () {

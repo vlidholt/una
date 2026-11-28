@@ -560,11 +560,43 @@ extension RoundedSuperellipseBorderExt on UnaRoundedSuperellipseBorder {
     BorderRadius defaultBorderRadius = BorderRadius.zero,
   }) {
     final effectiveTextDirection = textDirection ?? TextDirection.ltr;
-    return RoundedSuperellipseBorder(
+    return _ShaderSafeSuperellipseBorder(
       side: side?.toBorderSide() ?? BorderSide.none,
       borderRadius:
           borderRadius?.resolve(effectiveTextDirection) ?? defaultBorderRadius,
     );
+  }
+}
+
+/// A [RoundedSuperellipseBorder] whose gradient or image fill stays put on
+/// the web.
+///
+/// Flutter fills the shape with `drawRSuperellipse`, which on the web
+/// (CanvasKit and skwasm) moves the canvas to the shape's centre and draws
+/// a centred path: a shader moves with it, so a gradient showed only the
+/// half of itself that landed on the shape. A fill with a shader is drawn
+/// as a rectangle clipped to the shape instead; a clip is geometry only.
+class _ShaderSafeSuperellipseBorder extends RoundedSuperellipseBorder {
+  const _ShaderSafeSuperellipseBorder({super.side, super.borderRadius});
+
+  @override
+  void paintInterior(
+    Canvas canvas,
+    Rect rect,
+    Paint paint, {
+    TextDirection? textDirection,
+  }) {
+    if (!kIsWeb || paint.shader == null) {
+      super.paintInterior(canvas, rect, paint, textDirection: textDirection);
+      return;
+    }
+    canvas
+      ..save()
+      ..clipRSuperellipse(
+        borderRadius.resolve(textDirection).toRSuperellipse(rect),
+      )
+      ..drawRect(rect, paint)
+      ..restore();
   }
 }
 

@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:una/una.dart';
 
+import '../../app_bar_metrics.dart';
 import '../../una_harness.dart';
 
 void main() {
@@ -139,17 +140,17 @@ void main() {
         );
         final size = tester.getSize(find.byType(AppBar));
         expect(size.width, kSurfaceSizes[formFactor]!.width);
-        final themed = themeOf(
-          tester,
-          find.byType(AppBar),
-        ).appBarTheme.height!;
-        expect(themed, formFactor == FormFactor.mobile ? 44 : 64);
-        // On a phone or a tablet with no status bar above it, as here, the
-        // bar keeps a margin over its toolbar.
-        final inset = formFactor == FormFactor.desktop
-            ? 0
-            : themeOf(tester, find.byType(AppBar)).layoutTheme.gap(GapSize.sm);
-        expect(size.height, themed + 1 + inset);
+        final theme = themeOf(tester, find.byType(AppBar));
+        expect(
+          theme.appBarTheme.height,
+          formFactor == FormFactor.mobile ? 44 : 64,
+        );
+        // A filled bar has room around its buttons: on a phone more than
+        // the style's 44, the height of iOS's bar of bare glyphs. With no
+        // status bar above it, as here, it needs no margin over that.
+        final themed = filledToolbarHeight(theme);
+        expect(themed, formFactor == FormFactor.mobile ? 60 : 64);
+        expect(size.height, themed + 1);
       }
     });
 
@@ -471,10 +472,9 @@ void main() {
           ),
           formFactor: formFactor,
         );
-        final themed = themeOf(
-          tester,
-          find.byType(AppBar),
-        ).appBarTheme.height!;
+        final themed = filledToolbarHeight(
+          themeOf(tester, find.byType(AppBar)),
+        );
         expect(secondary, themed + 1, reason: formFactor.name);
         expect(primary, themed + 1 + 30, reason: formFactor.name);
         expect(

@@ -2,10 +2,10 @@ import 'package:example/docs/phone_frame.dart';
 import 'package:flutter/widgets.dart';
 import 'package:una/una.dart';
 
-/// A large bar over a photograph, filled and on Liquid Glass. Collapsed,
-/// the filled bar veils the pinned picture and ends on its hairline; the
-/// glass bar blurs it and lets its lower edge dissolve into the page
-/// scrolled under it.
+/// A large bar over a photograph, filled and on Liquid Glass. The picture
+/// goes with the page; collapsed, the filled bar is its surface and ends
+/// on its hairline, and the glass bar has no fill: the page under it is
+/// blurred and faded into the page colour.
 class SliverAppBarLiquidGlassExample extends StatelessWidget {
   const SliverAppBarLiquidGlassExample({super.key});
 

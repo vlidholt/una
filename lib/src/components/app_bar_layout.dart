@@ -84,9 +84,68 @@ bool appBarUsesLiquidGlass(BuildContext context, LiquidGlassMode? mode) =>
 double appBarTopInset(BuildContext context, {required bool liquid}) {
   final top = MediaQuery.paddingOf(context).top;
   if (top > 0) return top;
+  // A filled bar's toolbar has room around its buttons of its own (see
+  // [appBarStyleHeight]); capsules of glass float, and need the margin.
+  if (!liquid) return 0;
+  return Theme.of(context).layoutTheme.gap(GapSize.sm);
+}
+
+/// The constraints a `Scaffold` lays its app bar out with: the screen's
+/// width, and how far the scaffold's banner reaches below the bar
+/// ([below]). A bar of Liquid Glass reaches its scroll edge down under the
+/// banner as well, so the page scrolled under the two is blurred as one.
+///
+/// Constraints rather than an inherited value: the banner is laid out
+/// first, and a new [below] lays the bar out again in the same frame.
+@immutable
+class ScaffoldBarConstraints extends BoxConstraints {
+  /// [constraints] with the banner's height under the bar.
+  ScaffoldBarConstraints.from(BoxConstraints constraints, {required this.below})
+    : super(
+        minWidth: constraints.minWidth,
+        maxWidth: constraints.maxWidth,
+        minHeight: constraints.minHeight,
+        maxHeight: constraints.maxHeight,
+      );
+
+  /// How far below the bar the scaffold's banner reaches.
+  final double below;
+
+  /// How far below the bar a bar laid out with [constraints] has
+  /// something of the scaffold's under it: 0 outside a scaffold.
+  static double belowOf(BoxConstraints constraints) =>
+      constraints is ScaffoldBarConstraints ? constraints.below : 0;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ScaffoldBarConstraints && other.below == below && super == other;
+
+  @override
+  int get hashCode => Object.hash(super.hashCode, below);
+}
+
+/// The style height of a bar's toolbar: [height] when the caller gives
+/// one, otherwise the theme's — and for a filled bar at least an icon
+/// button with the small gap above and below it.
+///
+/// A phone's toolbar is 44, the height of iOS's bar, which draws its
+/// buttons as bare glyphs; una's buttons show a disc on hover and press,
+/// and in a 44-point bar that disc met the bar's edges. Material's bar is
+/// 64 around a 40-point state layer. A bar of Liquid Glass keeps iOS's
+/// height: its capsules float over the page and the bar has no edge.
+double appBarStyleHeight(
+  BuildContext context,
+  double? height, {
+  required bool liquid,
+}) {
+  if (height != null) return height;
   final theme = Theme.of(context);
-  if (!liquid && theme.formFactor == FormFactor.desktop) return 0;
-  return theme.layoutTheme.gap(GapSize.sm);
+  final styled = theme.appBarTheme.height ?? 64;
+  if (liquid) return styled;
+  return math.max(
+    styled,
+    theme.style.iconButtonSize + 2 * theme.layoutTheme.gap(GapSize.sm),
+  );
 }
 
 /// Whether [leading] is a button, which iOS 26 puts on a capsule of glass:
@@ -157,15 +216,32 @@ bool _isBareIconButton(Widget widget, ButtonVariant barVariant) =>
   );
 }
 
+/// The nearest scaffold around [context] that [has] — the page's own, or
+/// the one around the navigator the page is in: a shell whose destinations
+/// each have their own stack of pages keeps the app's drawer, and the bar
+/// of each page's own scaffold opens it.
+ScaffoldState? _scaffoldWith(
+  BuildContext context,
+  bool Function(ScaffoldState scaffold) has,
+) {
+  var scaffold = Scaffold.maybeOf(context);
+  while (scaffold != null) {
+    if (has(scaffold)) return scaffold;
+    scaffold = scaffold.context.findAncestorStateOfType<ScaffoldState>();
+  }
+  return null;
+}
+
 /// The button a bar shows at its start when it was given none: a close
 /// button on a full-screen dialog, a back button on a page that can be
-/// popped, a menu button over a scaffold with a drawer — or nothing.
+/// popped, a menu button under a scaffold with a drawer (its own, or one
+/// around the navigator it is in) — or nothing.
 Widget? impliedLeading(BuildContext context) {
   final route = ModalRoute.of(context);
   if (route is PageRoute && route.fullscreenDialog) return const CloseButton();
   if (route?.impliesAppBarDismissal ?? false) return const BackButton();
-  final scaffold = Scaffold.maybeOf(context);
-  if (scaffold != null && scaffold.hasDrawer) {
+  final scaffold = _scaffoldWith(context, (s) => s.hasDrawer);
+  if (scaffold != null) {
     return IconButton.ghost(
       icon: const PhosphorIcon(PhosphorIconsRegular.list),
       semanticLabel: UnaLocalizations.of(context).navigation.openMenu,
@@ -175,12 +251,12 @@ Widget? impliedLeading(BuildContext context) {
   return null;
 }
 
-/// [actions], or — when there are none and the scaffold has an end drawer
-/// — the button that opens it.
+/// [actions], or — when there are none and a scaffold around the bar has
+/// an end drawer (see [impliedLeading]) — the button that opens it.
 List<Widget> impliedActions(BuildContext context, List<Widget> actions) {
   if (actions.isNotEmpty) return actions;
-  final scaffold = Scaffold.maybeOf(context);
-  if (scaffold == null || !scaffold.hasEndDrawer) return actions;
+  final scaffold = _scaffoldWith(context, (s) => s.hasEndDrawer);
+  if (scaffold == null) return actions;
   return [
     IconButton.ghost(
       icon: const PhosphorIcon(PhosphorIconsRegular.list),
@@ -408,6 +484,7 @@ class AppBarSurface extends StatelessWidget {
     this.padding = EdgeInsets.zero,
     this.visibility,
     this.liquid = false,
+    this.edgeBelow = 0,
     super.key,
   });
 
@@ -416,6 +493,10 @@ class AppBarSurface extends StatelessWidget {
   /// nearer the screen's edge and reaching a little below the bar (see
   /// `LiquidGlassScrollEdge`), so the bar has no edge of its own.
   final bool liquid;
+
+  /// How far past the bar's own box its scroll edge reaches on Liquid
+  /// Glass, before the edge's own fade: a scaffold's banner under the bar.
+  final double edgeBelow;
 
   /// The bar's content.
   final Widget child;
@@ -449,7 +530,11 @@ class AppBarSurface extends StatelessWidget {
         // The scroll edge reaches below the bar.
         clipBehavior: Clip.none,
         children: [
-          Positioned.fill(
+          Positioned(
+            left: 0,
+            top: 0,
+            right: 0,
+            bottom: -edgeBelow,
             child: LiquidGlassScrollEdge(
               color: theme.colorScheme.background,
               visibility: visibility,

@@ -96,8 +96,8 @@ class UnaLogo extends StatelessWidget {
   }
 }
 
-/// Paints the Una mark into its whole box: the tile in [color] with a
-/// sheen from the top, corners [radius] of the side (0 for a square that
+/// Paints the Una mark into its whole box: the tile in a diagonal gradient
+/// round [color] with a sheen from the top, corners [radius] of the side (0 for a square that
 /// a platform masks itself), and the "U" in [ink] at [glyph] of the side.
 class UnaMarkPainter extends CustomPainter {
   const UnaMarkPainter({
@@ -120,16 +120,31 @@ class UnaMarkPainter extends CustomPainter {
       box,
       Radius.circular(side * radius),
     );
-    final top = Color.lerp(color, const Color(0xffffffff), .07)!;
-    canvas.drawRSuperellipse(
-      shape,
-      Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [top, color],
-        ).createShader(box),
-    );
+    // A diagonal from a lighter, clearer step of the primary's hue to a
+    // deeper one beside it, as the demo apps' icons run: a flat tile read
+    // as a placeholder next to them.
+    final base = HSLColor.fromColor(color);
+    HSLColor step(double hue, double saturation, double lightness) => base
+        .withHue((base.hue + hue) % 360)
+        .withSaturation((base.saturation * saturation).clamp(0.0, .9))
+        .withLightness((base.lightness + lightness).clamp(0.0, 1.0));
+    final light = step(-10, 1.7, .1).toColor();
+    final deep = step(16, 1.5, -.05).toColor();
+    // Through a clip and a rectangle, not `drawRSuperellipse`: on the web
+    // that draws about the shape's centre and the gradient moves with it.
+    canvas
+      ..save()
+      ..clipRSuperellipse(shape)
+      ..drawRect(
+        box,
+        Paint()
+          ..shader = LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [light, deep],
+          ).createShader(box),
+      )
+      ..restore();
     // The sheen: a soft lighter band across the top, as glass catches it.
     canvas
       ..save()

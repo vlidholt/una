@@ -60,11 +60,12 @@ final sliverAppBarDoc = ComponentDoc(
       title: 'Filled or Liquid Glass, over a picture',
       description:
           'Over a `background` picture both bars put their buttons on '
-          'discs. Collapsing, the filled bar veils the pinned picture and '
-          'ends on its hairline, with no blur. On Liquid Glass the bar has '
-          'no fill: the picture is blurred as the titles go, its lower edge '
-          'dissolves into the page scrolled under it, and the buttons stand '
-          'on capsules of glass. In a browser the glass bar keeps that '
+          'discs. The picture goes with the page as the bar collapses. '
+          'Collapsed, the filled bar is its own surface and ends on its '
+          'hairline, with no blur. On Liquid Glass the bar has no fill: the '
+          'page scrolled under it is blurred and faded into the page '
+          'colour, and the buttons stand on capsules of glass. In a browser '
+          'the glass bar keeps that '
           'soft edge only with `LiquidGlassMode.always` or '
           '`LiquidGlassTheme.webScrollEdge`.',
       minPreviewHeight: 600,

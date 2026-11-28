@@ -9,7 +9,7 @@ final spinnerDoc = ComponentDoc(
   title: 'Spinner',
   description:
       'A small animated loading indicator for a button or a line of text. '
-      'Four looks: the ring, orbit, morph and goo.',
+      'Five looks: the ring, orbit, morph, goo and halo.',
   examples: [
     ComponentExample(
       id: 'spinner_basic',
@@ -30,7 +30,9 @@ final spinnerDoc = ComponentDoc(
           'bunching up and flinging apart; `Spinner.morph()` a shape that '
           'twists from clover to sun to pill and on; `Spinner.goo()` a drop '
           'that splits into three droplets on stretching necks and pulls '
-          'itself back together. Each reads at 16 points and holds up at '
+          'itself back together; `Spinner.halo()` a ring of dots with a wave '
+          'of light running round it, each dot swelling and glowing as it '
+          'passes. Each reads at 16 points and holds up at '
           'any size. Under reduced motion a spinner holds still and '
           'breathes.',
       minPreviewHeight: 260,

@@ -93,6 +93,8 @@ void main() {
       expect(_painterOf(tester), isA<MorphSpinnerPainter>());
       await tester.pumpWidget(_app(const Spinner.goo()));
       expect(_painterOf(tester), isA<GooSpinnerPainter>());
+      await tester.pumpWidget(_app(const Spinner.halo()));
+      expect(_painterOf(tester), isA<HaloSpinnerPainter>());
 
       // A theme's variant reaches a spinner that names none — a button's
       // loading spinner among them.
@@ -159,6 +161,10 @@ void main() {
           frame: () => (time: time, opacity: 1),
         ),
         GooSpinnerPainter(
+          color: const Color(0xff000000),
+          frame: () => (time: time, opacity: 1),
+        ),
+        HaloSpinnerPainter(
           color: const Color(0xff000000),
           frame: () => (time: time, opacity: 1),
         ),
@@ -276,6 +282,7 @@ void main() {
               Spinner.orbit(),
               Spinner.morph(),
               Spinner.goo(),
+              Spinner.halo(),
             ],
           ),
         ),

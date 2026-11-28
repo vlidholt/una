@@ -71,10 +71,6 @@ void main() {
 
   const stays = Duration.zero;
 
-  final closeButton = find.byWidgetPredicate(
-    (widget) => widget is Pressable && widget.semanticLabel == 'Dismiss',
-  );
-
   group('showing', () {
     testWidgets('show returns what identifies the toast', (tester) async {
       await pumpApp(tester);
@@ -837,23 +833,6 @@ void main() {
       expect(find.text('Hi'), findsOneWidget);
     });
 
-    testWidgets('a mouse drag does not move it', (tester) async {
-      await one(tester);
-      final rest = rectOf(tester, 'Hi');
-      final gesture = await tester.startGesture(
-        rest.center,
-        kind: PointerDeviceKind.mouse,
-      );
-      await gesture.moveBy(const Offset(0, 30));
-      await gesture.moveBy(const Offset(0, 80));
-      await tester.pump();
-      expect(rectOf(tester, 'Hi').top, rest.top);
-      await gesture.up();
-      await gesture.removePointer();
-      await settle(tester);
-      expect(find.text('Hi'), findsOneWidget);
-    });
-
     testWidgets('a tap on its action still gets through, and time stands '
         'still while a finger is on the toast', (tester) async {
       await pumpApp(tester, size: const Size(390, 800));
@@ -889,54 +868,53 @@ void main() {
   });
 
   group('mouse and keyboard', () {
-    testWidgets('the close button shows when the toast is pointed at, and '
-        'dismisses it', (tester) async {
+    testWidgets('a toast has no close button; a mouse swipes it away as a '
+        'finger does', (tester) async {
       await pumpApp(tester);
       Toaster.of(host).show(const Toast(title: Text('Hi'), duration: stays));
       await settle(tester);
-      expect(closeButton, findsOneWidget);
-      double opacity() => tester
-          .widget<Opacity>(
-            find
-                .ancestor(of: closeButton, matching: find.byType(Opacity))
-                .first,
-          )
-          .opacity;
-      expect(opacity(), 0);
-      // Hidden, it does not take a tap meant for the toast's corner.
-      await tester.tapAt(tester.getCenter(closeButton));
-      await settle(tester);
-      expect(find.text('Hi'), findsOneWidget);
-
-      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
-      await mouse.addPointer(location: Offset.zero);
-      addTearDown(mouse.removePointer);
-      await mouse.moveTo(rectOf(tester, 'Hi').center);
-      await settle(tester);
-      expect(opacity(), 1);
-      // On the corner, over the edge of the toast.
-      final toast = rectOf(tester, 'Hi');
-      final button = tester.getRect(closeButton);
-      expect(button.center.dx, lessThan(toast.left + 4));
-      expect(button.center.dy, lessThan(toast.top + 4));
-
-      await mouse.moveTo(button.center);
-      await tester.pump();
-      await mouse.down(button.center);
+      expect(
+        find.byWidgetPredicate(
+          (widget) => widget is Pressable && widget.semanticLabel == 'Dismiss',
+        ),
+        findsNothing,
+      );
+      final start = rectOf(tester, 'Hi').center;
+      final mouse = await tester.startGesture(
+        start,
+        kind: PointerDeviceKind.mouse,
+      );
+      for (var i = 0; i < 10; i++) {
+        await mouse.moveBy(const Offset(0, 12));
+        await tester.pump(const Duration(milliseconds: 16));
+      }
       await mouse.up();
       await settle(tester);
       expect(find.text('Hi'), findsNothing);
     });
 
-    testWidgets('a toast that is not dismissible has no close button', (
-      tester,
-    ) async {
+    testWidgets('F6 focuses a toast with no control itself, with a ring, '
+        'and Escape dismisses it', (tester) async {
       await pumpApp(tester);
-      Toaster.of(host).show(
-        const Toast(title: Text('Hi'), duration: stays, dismissible: false),
-      );
+      final toaster = Toaster.of(host);
+      toaster.show(const Toast(title: Text('Hi'), duration: stays));
       await settle(tester);
-      expect(closeButton, findsNothing);
+      expect(toaster.focusToasts(), isTrue);
+      await settle(tester);
+      expect(
+        tester
+            .widgetList<FocusRing>(
+              find.ancestor(
+                of: find.byType(Toast),
+                matching: find.byType(FocusRing),
+              ),
+            )
+            .any((ring) => ring.visible),
+        isTrue,
+      );
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await settle(tester);
+      expect(find.text('Hi'), findsNothing);
     });
 
     testWidgets('F6 moves the focus to the front toast and back; while it '
@@ -1057,17 +1035,6 @@ void main() {
       expect(toaster.focusToasts(), isTrue);
       await settle(tester);
       expect(field.hasFocus, isFalse);
-      // The close button shows for the keyboard.
-      expect(
-        tester
-            .widget<Opacity>(
-              find
-                  .ancestor(of: closeButton, matching: find.byType(Opacity))
-                  .first,
-            )
-            .opacity,
-        1,
-      );
       unawaited(toaster.dismiss(id));
       await settle(tester);
       expect(field.hasPrimaryFocus, isTrue);
@@ -1100,8 +1067,9 @@ void main() {
   });
 
   group('semantics', () {
-    testWidgets('a toast is a live region that can be dismissed, and its '
-        'close button says what it does', (tester) async {
+    testWidgets('a toast is a live region that can be dismissed', (
+      tester,
+    ) async {
       final handle = tester.ensureSemantics();
       await pumpApp(tester);
       final toaster = Toaster.of(host);
@@ -1127,24 +1095,9 @@ void main() {
         liveRegion().getSemanticsData().hasAction(SemanticsAction.dismiss),
         isTrue,
       );
-      // Hidden, the close button is not read; the toast's own action is
-      // how a screen reader dismisses it.
+      // There is no close button: the toast's own action is how a screen
+      // reader dismisses it.
       expect(find.bySemanticsLabel('Dismiss'), findsNothing);
-      toaster.focusToasts();
-      await settle(tester);
-      expect(
-        tester.getSemantics(find.bySemanticsLabel('Dismiss')),
-        matchesSemantics(
-          label: 'Dismiss',
-          isButton: true,
-          isEnabled: true,
-          hasEnabledState: true,
-          isFocusable: true,
-          isFocused: true,
-          hasTapAction: true,
-          hasFocusAction: true,
-        ),
-      );
       // The action a screen reader offers does what it says.
       final live = liveRegion();
       live.owner!.performAction(live.id, SemanticsAction.dismiss);
@@ -1193,7 +1146,6 @@ void main() {
         tester.getSize(find.byType(Toast)).width,
         theme.toasterTheme.width,
       );
-      expect(closeButton, findsNothing);
       await expectLater(
         find.byType(Toast),
         matchesGoldenFile('goldens/toast.png'),

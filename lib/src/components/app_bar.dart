@@ -142,7 +142,10 @@ class AppBar extends StatelessWidget {
   /// bar sets one.
   final SystemUiOverlayStyle? systemOverlayStyle;
 
-  /// The widest the content grows. Defaults to the theme's page width.
+  /// The widest the bar's content box grows, its horizontal [padding]
+  /// included, before it is centred. Defaults to the theme's: the page's
+  /// width plus its margins, so the bar lines up with a `PageContainer`.
+  /// A screen whose columns are wider sets the bar to match them.
   final double? maxWidth;
 
   /// The gap between [leading], [title], [middle] and [actions].
@@ -175,7 +178,10 @@ class AppBar extends StatelessWidget {
       context,
       theme.appBarTheme.liquidGlass,
     );
-    return appBarToolbarHeight(context, theme.appBarTheme.height ?? 64) +
+    return appBarToolbarHeight(
+          context,
+          appBarStyleHeight(context, null, liquid: liquid),
+        ) +
         // The hairline under the bar.
         1 +
         (primary ? appBarTopInset(context, liquid: liquid) : 0);
@@ -185,12 +191,12 @@ class AppBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final bar = theme.appBarTheme;
-    final toolbarHeight = appBarToolbarHeight(
-      context,
-      height ?? bar.height ?? 64,
-    );
     final material = appBarMaterial(context, liquidGlass ?? bar.liquidGlass);
     final liquid = material == AppBarMaterial.liquid;
+    final toolbarHeight = appBarToolbarHeight(
+      context,
+      appBarStyleHeight(context, height, liquid: liquid),
+    );
     // Liquid Glass without shader filters: the bar colour, opaque.
     final solid = material == AppBarMaterial.solid;
     final barFill =
@@ -245,26 +251,40 @@ class AppBar extends StatelessWidget {
             children: [toolbar, bottom!],
           );
 
-    Widget surface(Animation<double>? visibility) => AppBarSurface(
-      color: fill,
-      borderColor: showBorder
-          ? bar.borderColor ?? theme.colorScheme.border
-          : null,
-      blur: solid ? 0 : bar.blur ?? 0,
-      saturation: solid ? 1 : bar.saturation ?? 1,
-      // The hairline is added to the height rather than taken from it, so
-      // a 64-point bar has 64 points for its content.
-      padding: EdgeInsets.only(top: topInset),
-      visibility: visibility,
-      liquid: liquid,
-      child: content,
-    );
+    Widget surface(Animation<double>? visibility, double edgeBelow) =>
+        AppBarSurface(
+          color: fill,
+          borderColor: showBorder
+              ? bar.borderColor ?? theme.colorScheme.border
+              : null,
+          blur: solid ? 0 : bar.blur ?? 0,
+          saturation: solid ? 1 : bar.saturation ?? 1,
+          // The hairline is added to the height rather than taken from it, so
+          // a 64-point bar has 64 points for its content.
+          padding: EdgeInsets.only(top: topInset),
+          visibility: visibility,
+          liquid: liquid,
+          edgeBelow: edgeBelow,
+          child: content,
+        );
+
+    Widget surfaceFor(double edgeBelow) =>
+        behavior == AppBarSurfaceBehavior.always
+        ? surface(null, edgeBelow)
+        : _ScrolledUnder(
+            builder: (visibility) => surface(visibility, edgeBelow),
+          );
 
     Widget result = Semantics(
       container: true,
-      child: behavior == AppBarSurfaceBehavior.always
-          ? surface(null)
-          : _ScrolledUnder(builder: surface),
+      // On Liquid Glass the scroll edge reaches down under a scaffold's
+      // banner too, which the scaffold says in the bar's constraints.
+      child: liquid
+          ? LayoutBuilder(
+              builder: (context, constraints) =>
+                  surfaceFor(ScaffoldBarConstraints.belowOf(constraints)),
+            )
+          : surfaceFor(0),
     );
     if (primary) {
       result = AnnotatedRegion<SystemUiOverlayStyle>(
@@ -298,7 +318,17 @@ class _ScrolledUnderState extends State<_ScrolledUnder>
     with SingleTickerProviderStateMixin {
   late final _controller = AnimationController(vsync: this);
   ScrollNotificationObserverState? _observer;
-  bool _scrolledUnder = false;
+  double _target = 0;
+
+  /// How far the page scrolls under the bar for its surface to come in
+  /// all the way. Tied to the scroll, the surface rises with the page as
+  /// iOS's scroll edge does; run on a timer as soon as anything was under
+  /// it, a blur popped in over the page's first lines.
+  static const _reach = 32.0;
+
+  /// The largest step the surface takes with the scroll in one go; a jump
+  /// further (a page restored mid-way, a programmatic scroll) is eased.
+  static const _maxStep = .25;
 
   @override
   void didChangeDependencies() {
@@ -316,18 +346,25 @@ class _ScrolledUnderState extends State<_ScrolledUnder>
     }
     final metrics = notification.metrics;
     final under = switch (metrics.axisDirection) {
-      AxisDirection.down => metrics.extentBefore > 0,
+      AxisDirection.down => metrics.extentBefore,
       // A reversed list, a conversation: its start is at the bottom.
-      AxisDirection.up => metrics.extentAfter > 0,
+      AxisDirection.up => metrics.extentAfter,
       // A carousel in the page says nothing about what is under the bar.
-      AxisDirection.left || AxisDirection.right => _scrolledUnder,
+      AxisDirection.left || AxisDirection.right => null,
     };
-    if (under == _scrolledUnder) return;
-    _scrolledUnder = under;
+    if (under == null) return;
+    final target = (under / _reach).clamp(0.0, 1.0);
+    if (target == _target) return;
+    _target = target;
+    if ((target - _controller.value).abs() <= _maxStep &&
+        !_controller.isAnimating) {
+      _controller.value = target;
+      return;
+    }
     final motion = Motion.of(context);
     _controller.animateTo(
-      under ? 1 : 0,
-      duration: motion.fast,
+      target,
+      duration: motion.normal,
       curve: motion.standard,
     );
   }

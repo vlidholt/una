@@ -380,9 +380,11 @@ was measured from (Strand, until it moved), is its own repository,
   frosted glass too.
 - **Spinners.** `Spinner` defaults to the progress ring's look, and
   `SpinnerVariant` adds `orbit` (three comets that bunch and fling apart),
-  `morph` (a blob turning through six shapes) and `goo` (droplets pushed
-  out on stretching necks and pulled back in); `Spinner.orbit`, `.morph`,
-  `.goo` and `SpinnerTheme.variant`. Each is one painter on one clock;
+  `morph` (a blob turning through six shapes), `goo` (droplets pushed
+  out on stretching necks and pulled back in) and `halo` (a ring of dots
+  with a wave of light running round it, each swelling and glowing as it
+  passes); `Spinner.orbit`, `.morph`, `.goo`, `.halo` and
+  `SpinnerTheme.variant`. Each is one painter on one clock;
   under reduced motion they hold still and breathe.
 - **Skeleton shapes.** `Skeleton.avatar`, `Skeleton.button`,
   `Skeleton.chip`, `SkeletonText`, `SkeletonListTile`, `SkeletonCard`,
@@ -391,6 +393,16 @@ was measured from (Strand, until it moved), is its own repository,
 - **`SwipeActionsTheme`** (`edgeShadowColor`, `edgeShadowWidth`): a row
   casts a soft shadow onto the actions it uncovers, stronger in dark
   themes, and none at rest.
+- **`GlassLevel.bar`**: the bars' own glass for a panel beside them — the
+  bottom bar's tint frosted, its untinted glass on Liquid Glass — so a
+  player above a tab bar reads as one of the bars.
+- **A page's own bar finds the shell's drawer.** A page with its own
+  `Scaffold` inside a navigator inside another scaffold — a destination
+  with its own stack of pages — shows the menu button for the outer
+  scaffold's drawer (and end drawer) on its root page, and the back
+  button above it. The app-structure guide has the recipe for a stack per
+  destination with URLs (`UnaApp.router`, `StatefulShellRoute`,
+  `UnaPage`).
 
 #### Liquid Glass
 
@@ -505,11 +517,11 @@ was measured from (Strand, until it moved), is its own repository,
 - **A docked bottom bar on Liquid Glass is the page's scroll edge**
   (blurred and faded from the bottom up, the controls standing on it), not
   a slab of glass; without shader filters it is solid, as the top bar is.
-- **`SliverAppBar.pinBackground`** (default true): a large bar's picture
-  stays behind the collapsed toolbar, as a profile's cover does, blurred
-  and veiled in the page colour as the bar collapses so the small title
-  and buttons read on it. On Liquid Glass its lower edge dissolves into
-  the blurred page under the bar; false fades it out as before.
+- **A large bar's picture goes with the page.** `SliverAppBar.background`
+  fades out as the bar collapses and the collapsed bar is its own
+  surface, filled or on glass; there is no option to keep the picture
+  behind the toolbar, which left it a grey slab or a toolbar with nothing
+  to stand on.
 - **A sliver bar's scroll edge on Liquid Glass is the collapsed bar's
   height and reaches below it.** It was stretched over the whole
   expanded box and clipped to the visible bar, so collapsed it showed
@@ -811,13 +823,34 @@ was measured from (Strand, until it moved), is its own repository,
   the flick; it closes without bounce now, and never draws past shut.
 - **An indeterminate `ProgressRing` grows and shrinks while it turns**, as
   Material's does, instead of turning a fixed arc.
-- **A phone's bar keeps a margin above its toolbar where there is no
-  status bar** — a browser, a phone frame in a page — as a Liquid Glass bar
-  already did: its title and buttons met the top of the window.
-- **A filled bar does not blur a pinned picture.** Collapsing over a
-  `SliverAppBar.background`, a frosted or solid bar veils it more and ends
-  on its hairline; the blur, which stopped on a hard line there, is kept
-  for Liquid Glass, where the picture dissolves into the page below.
+- **A filled bar has room around its buttons.** A phone's toolbar was
+  44, iOS's height for a bar of bare glyphs, and una's 44-point buttons
+  filled it: the hover and press disc met the bar's edges. A filled bar's
+  toolbar is at least an icon button with the small gap above and below
+  (60 on a phone; Material's is 64 around a 40-point state layer), and it
+  needs no margin above it where there is no status bar. A bar of Liquid
+  Glass keeps 44 and its margin: its capsules float.
+- **On Liquid Glass the bar's soft edge reaches under the scaffold's
+  banner**, so the page scrolled under the two is blurred as one; the
+  banner used to sit over sharp content.
+- **A bar's surface comes in with the scroll.** `whenScrolled` and Liquid
+  Glass bars rise over the first 32 points the page moves under them,
+  instead of fading in on a timer as soon as anything was under them,
+  which read as a blur popping in.
+- **A floating bottom bar with labels lights the label too**: its lens
+  and hover wash take in the icon and its label, as on Liquid Glass. A
+  docked bar keeps Material's pill behind the icon.
+- **Toasts have no close button.** A mouse or a trackpad swipes a toast
+  away as a finger does; F6 focuses a toast that has no control itself,
+  with a ring, and Escape dismisses it.
+- **A reshaped field's focus ring follows its shape.** A radius given to
+  a decoration's `border` (a pill-shaped field) now shapes its focused
+  and error borders and its ring too; the ring stayed at the theme's
+  radius, a rounded rectangle round a pill.
+- **A gradient or image in a superellipse stays put on the web.** Flutter
+  fills a `RoundedSuperellipseBorder` with `drawRSuperellipse`, which in a
+  browser moves a shader with the shape's centre; una's superellipse
+  border fills a shader through a clip there.
 - **Skeletons shimmer as one.** One clock drives every skeleton on screen
   and a soft diagonal band crosses them together; the highlight is lighter
   than the base in light and dark (it was a dark band on the translucent
@@ -986,8 +1019,7 @@ From the component review:
   and buttons on a floating `Toolbar` follow the bar's curve.
 - **Scrolling and dragging.** `SliverAppBar.large`'s title goes up under
   the toolbar, whose surface (or scroll edge, on Liquid Glass) comes in
-  over it, instead of being cut off; over a pinned picture the titles
-  dissolve first and the picture blurs only as they go. A
+  over it, instead of being cut off. A
   `ReorderableListView` row with no handle drags from anywhere with a
   mouse, as on a `Board`. `SwipeActions` takes a mouse drag and a
   two-finger trackpad swipe.

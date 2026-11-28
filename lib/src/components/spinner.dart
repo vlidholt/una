@@ -25,6 +25,11 @@ enum SpinnerVariant {
   /// A drop of goo that splits into three droplets on stretching necks and
   /// pulls itself back together.
   goo,
+
+  /// A ring of dots with a wave of light running round it: each dot swells
+  /// and glows as it passes, then settles. At home on a dark pill or a
+  /// photograph, in the colour of the text beside it.
+  halo,
 }
 
 /// {@template Spinner}
@@ -98,6 +103,18 @@ class Spinner extends StatefulWidget {
        trackColor = null,
        strokeWidth = null;
 
+  /// A ring of dots with a wave of light running round it
+  /// ([SpinnerVariant.halo]).
+  const Spinner.halo({
+    super.key,
+    this.size,
+    this.color,
+    this.duration,
+    this.semanticLabel,
+  }) : variant = SpinnerVariant.halo,
+       trackColor = null,
+       strokeWidth = null;
+
   /// {@template Spinner.variant}
   /// The look of the spinner. Defaults to [SpinnerVariant.ring].
   /// {@endtemplate}
@@ -129,8 +146,9 @@ class Spinner extends StatefulWidget {
 
   /// {@template Spinner.duration}
   /// The length of one cycle: a grow and shrink of the ring, a lap of the
-  /// orbit, a change of shape, a split and merge of the goo. Defaults to
-  /// the variant's own (1333, 1500, 750 and 1700 ms); the rest of the
+  /// orbit, a change of shape, a split and merge of the goo, a lap of the
+  /// halo's wave. Defaults to the variant's own (1333, 1500, 750, 1700 and
+  /// 1100 ms); the rest of the
   /// animation keeps pace with it.
   /// {@endtemplate}
   final Duration? duration;
@@ -246,6 +264,11 @@ class _SpinnerState extends State<Spinner> with SingleTickerProviderStateMixin {
           repaint: _clock,
         ),
         SpinnerVariant.goo => GooSpinnerPainter(
+          color: color,
+          frame: _frame,
+          repaint: _clock,
+        ),
+        SpinnerVariant.halo => HaloSpinnerPainter(
           color: color,
           frame: _frame,
           repaint: _clock,

@@ -186,7 +186,7 @@ void main() {
         // under; the bottom bar's including its margin and the 34 of home
         // indicator.
         // …and the hairline under the app bar, which is added to its height.
-        expect(seen.top, (formFactor == FormFactor.mobile ? 44 : 64) + 1 + 44);
+        expect(seen.top, (formFactor == FormFactor.mobile ? 60 : 64) + 1 + 44);
         expect(seen.top, appBar.height);
         expect(seen.bottom, (formFactor == FormFactor.mobile ? 88 : 84) + 34);
         expect(seen.bottom, bar.height);
@@ -780,7 +780,7 @@ void main() {
       );
       expect(
         seen,
-        const EdgeInsets.only(top: 44 + 1 + 44, bottom: 88 + 34),
+        const EdgeInsets.only(top: 60 + 1 + 44, bottom: 88 + 34),
       );
     });
 
@@ -991,7 +991,7 @@ void main() {
       );
       expect(find.byType(BottomNavigationBar), findsNothing);
       expect(seen.bottom, 34);
-      expect(seen.top, 44 + 1 + 44);
+      expect(seen.top, 60 + 1 + 44);
     });
 
     testWidgets('five destinations, a logo, a search field and two actions '
