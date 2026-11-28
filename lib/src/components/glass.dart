@@ -14,7 +14,8 @@ enum GlassLevel {
   strong,
 
   /// The bars' own glass: the bottom bar's tint, and on Liquid Glass the
-  /// bottom bar's glass as the theme sets it, untinted. For a panel that
+  /// bottom bar's glass as the theme sets it, untinted — with the floating
+  /// bar's corner radius and shadow unless given others. For a panel that
   /// floats beside the bars and should read as one of them — a player or
   /// a route in progress above the tab bar.
   bar,
@@ -55,7 +56,7 @@ class Glass extends StatelessWidget {
     this.saturation,
     this.borderRadius,
     this.border,
-    this.shadows = const [],
+    this.shadows,
     this.padding,
     this.width,
     this.height,
@@ -96,8 +97,9 @@ class Glass extends StatelessWidget {
   final BoxBorder? border;
 
   /// Shadows cast by the surface. They are painted outside it and never show
-  /// through the glass.
-  final List<BoxShadow> shadows;
+  /// through the glass. Default to none — at the [GlassLevel.bar] level, to
+  /// the floating bottom bar's.
+  final List<BoxShadow>? shadows;
 
   /// Padding around [child].
   final EdgeInsetsGeometry? padding;
@@ -118,7 +120,18 @@ class Glass extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final glass = theme.glassTheme;
-    final radius = borderRadius ?? glass.borderRadius ?? theme.radius;
+    final bar = theme.bottomNavigationBarTheme;
+    // At the bar level, the floating bottom bar's shape and shadow too.
+    final radius =
+        borderRadius ??
+        (level == GlassLevel.bar
+            ? bar.borderRadius ?? theme.radii.full
+            : glass.borderRadius ?? theme.radius);
+    final shadows =
+        this.shadows ??
+        (level == GlassLevel.bar
+            ? bar.shadows ?? theme.style.floatingShadow
+            : const <BoxShadow>[]);
     // A scrim (an explicit colour) and unfrosted glass stay as they are:
     // Liquid Glass stands in for the frosted surface only.
     final effectiveBorder =

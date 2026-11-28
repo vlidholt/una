@@ -24,6 +24,10 @@ uniform float uMaxSigma;
 uniform float uTexScale;
 // 1 for the bottom edge of the screen (blurred most at the bottom), else 0.
 uniform float uFromBottom;
+// The page colour, premultiplied: what the snapshot is laid over. The
+// snapshot holds the page's content but not the scaffold's background, so
+// text on a plain page blurred to near nothing and stayed sharp beneath.
+uniform vec4 uBackground;
 
 // The page under the rectangle, exactly covering it.
 uniform sampler2D uImage;
@@ -66,6 +70,8 @@ void main() {
       weights += w;
     }
   }
-  // The snapshot is premultiplied, and so is the output.
-  fragColor = (sum / weights) * alpha;
+  // The snapshot is premultiplied, and so is the output: over the page
+  // colour, so that the blur covers the sharp page where it is drawn.
+  vec4 blurred = sum / weights;
+  fragColor = (blurred + uBackground * (1.0 - blurred.a)) * alpha;
 }

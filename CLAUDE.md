@@ -314,10 +314,20 @@ componentTheme.liquidGlass)` at build: never a window width, never cached.
 - **A bar's surface follows the scroll** (`_ScrolledUnder`): up over the
   first 32 points, eased only for a jump of more than a quarter.
 - **A page's own bar finds an enclosing scaffold's drawer**
-  (`_scaffoldWith` in `app_bar_layout.dart`): a destination with its own
+  (`Scaffold.withDrawerOf`): a destination with its own
   navigator inside a shell scaffold, each page with its own `Scaffold`,
   gets the shell's menu button on its root and a back button above. The
   recipe with `go_router` is in the app-structure guide.
+- **A page below a shell claims the start edge for its back swipe**
+  (`BackEdgeClaims`, internal): the scaffold publishes a registry around
+  its layout, a `UnaPageRoute`'s back detector registers a claim (current,
+  can pop, on top), and the scaffold's start-edge drawer strip
+  (`UnlessEdgeClaimed`) takes no hit while one is made. Asked at hit
+  test: nothing rebuilds when pages come and go. Its own route's
+  `canPopOf` cannot tell: a shell's route never pops.
+- **A large bar settles** (`_settleLarge`) when the scroll stops part
+  way, by `ScrollPosition.animateTo`; a glass bar with a `bottom` keeps
+  its edge at rest.
 - **A bar picks its buttons' look; apps do not ask which material it is
   on.** `Button.variant`/`IconButton.variant` are nullable, and the
   toolbar puts an internal `BarButtonScope` (`bar_button_scope.dart`,

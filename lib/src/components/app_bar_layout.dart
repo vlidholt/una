@@ -216,22 +216,6 @@ bool _isBareIconButton(Widget widget, ButtonVariant barVariant) =>
   );
 }
 
-/// The nearest scaffold around [context] that [has] — the page's own, or
-/// the one around the navigator the page is in: a shell whose destinations
-/// each have their own stack of pages keeps the app's drawer, and the bar
-/// of each page's own scaffold opens it.
-ScaffoldState? _scaffoldWith(
-  BuildContext context,
-  bool Function(ScaffoldState scaffold) has,
-) {
-  var scaffold = Scaffold.maybeOf(context);
-  while (scaffold != null) {
-    if (has(scaffold)) return scaffold;
-    scaffold = scaffold.context.findAncestorStateOfType<ScaffoldState>();
-  }
-  return null;
-}
-
 /// The button a bar shows at its start when it was given none: a close
 /// button on a full-screen dialog, a back button on a page that can be
 /// popped, a menu button under a scaffold with a drawer (its own, or one
@@ -240,7 +224,7 @@ Widget? impliedLeading(BuildContext context) {
   final route = ModalRoute.of(context);
   if (route is PageRoute && route.fullscreenDialog) return const CloseButton();
   if (route?.impliesAppBarDismissal ?? false) return const BackButton();
-  final scaffold = _scaffoldWith(context, (s) => s.hasDrawer);
+  final scaffold = Scaffold.withDrawerOf(context);
   if (scaffold != null) {
     return IconButton.ghost(
       icon: const PhosphorIcon(PhosphorIconsRegular.list),
@@ -255,7 +239,7 @@ Widget? impliedLeading(BuildContext context) {
 /// an end drawer (see [impliedLeading]) — the button that opens it.
 List<Widget> impliedActions(BuildContext context, List<Widget> actions) {
   if (actions.isNotEmpty) return actions;
-  final scaffold = _scaffoldWith(context, (s) => s.hasEndDrawer);
+  final scaffold = Scaffold.withDrawerOf(context, end: true);
   if (scaffold == null) return actions;
   return [
     IconButton.ghost(

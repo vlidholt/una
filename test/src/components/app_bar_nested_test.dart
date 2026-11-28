@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:una/una.dart';
@@ -70,5 +71,54 @@ void main() {
       formFactor: FormFactor.mobile,
     );
     expect(button('Open menu'), findsOneWidget);
+  });
+
+  testWidgets('withDrawerOf finds the shell from a page', (tester) async {
+    await pumpUna(
+      tester,
+      shell(drawer: false, endDrawer: true),
+      formFactor: FormFactor.mobile,
+    );
+    final context = tester.element(find.text('Trips'));
+    expect(Scaffold.withDrawerOf(context), isNull);
+    final shellState = Scaffold.withDrawerOf(context, end: true);
+    expect(shellState, isNotNull);
+    expect(shellState!.hasEndDrawer, isTrue);
+  });
+
+  testWidgets('on iOS a swipe from the edge of a pushed page goes back, not '
+      "into the shell's drawer; on the root page it opens the drawer", (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    try {
+      await pumpUna(tester, shell(), formFactor: FormFactor.mobile);
+      navigator.currentState!.push(
+        UnaPageRoute<void>(builder: (_) => page('Lofoten')),
+      );
+      for (var i = 0; i < 20; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      Future<void> swipe() async {
+        final gesture = await tester.startGesture(const Offset(4, 400));
+        for (var i = 0; i < 10; i++) {
+          await gesture.moveBy(const Offset(30, 0));
+          await tester.pump(const Duration(milliseconds: 16));
+        }
+        await gesture.up();
+        for (var i = 0; i < 30; i++) {
+          await tester.pump(const Duration(milliseconds: 50));
+        }
+      }
+
+      await swipe();
+      expect(find.text('Lofoten'), findsNothing);
+      expect(find.text('Menu'), findsNothing);
+      // Back on the root, the edge is the drawer's.
+      await swipe();
+      expect(find.text('Menu'), findsOneWidget);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
   });
 }

@@ -12,6 +12,7 @@ import 'package:una/src/i18n/localizations_delegate.dart';
 import 'package:una/src/theme/data.dart';
 import 'package:una/src/theme/motion.dart';
 import 'package:una/src/theme/theme.dart';
+import 'package:una/src/utils/back_edge_claims.dart';
 import 'package:una/src/utils/backdrop.dart';
 import 'package:una/src/utils/expand_reveal.dart';
 import 'package:una/src/utils/overlay_insets.dart';
@@ -211,6 +212,32 @@ class Scaffold extends StatefulWidget {
   static ScaffoldState? maybeOf(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<_ScaffoldScope>()?.state;
 
+  /// The nearest scaffold around [context] with a drawer — or with an end
+  /// drawer, when [end] — whether it is the page's own or one around the
+  /// navigator the page is in: a shell whose destinations each have their
+  /// own stack of pages keeps the app's drawers, and each page has its own
+  /// scaffold. Null when there is none.
+  ///
+  /// A page's bar uses it for its implied menu button; call it to open the
+  /// shell's drawer from a button of your own:
+  ///
+  /// ```dart
+  /// IconButton(
+  ///   icon: const PhosphorIcon(PhosphorIconsRegular.funnelSimple),
+  ///   semanticLabel: 'Filters',
+  ///   onPressed: () => Scaffold.withDrawerOf(context, end: true)
+  ///       ?.openEndDrawer(),
+  /// )
+  /// ```
+  static ScaffoldState? withDrawerOf(BuildContext context, {bool end = false}) {
+    var scaffold = maybeOf(context);
+    while (scaffold != null) {
+      if (end ? scaffold.hasEndDrawer : scaffold.hasDrawer) return scaffold;
+      scaffold = scaffold.context.findAncestorStateOfType<ScaffoldState>();
+    }
+    return null;
+  }
+
   @override
   State<Scaffold> createState() => ScaffoldState();
 }
@@ -227,6 +254,7 @@ class Scaffold extends StatefulWidget {
 class ScaffoldState extends State<Scaffold> with TickerProviderStateMixin {
   // The body, for a bar's scroll edge drawn by una's shader.
   final _edgeSource = ScrollEdgeSourceHandle();
+  final _backEdge = BackEdgeClaims();
 
   // Each drawer's content, handed to its route. The route is in the
   // navigator's overlay, not under this widget, so it cannot simply be
@@ -681,10 +709,15 @@ class ScaffoldState extends State<Scaffold> with TickerProviderStateMixin {
         ),
         // The strips stay while a drawer is open: taking one away mid-drag
         // would cancel the drag that is opening it.
+        // The start edge only while no page below claims it for going
+        // back: a pushed page in a navigator in [body].
         if (edgeDrag && hasDrawer)
           LayoutId(
             id: _Slot.startEdge,
-            child: _edgeDragArea(atEnd: false, sign: sign),
+            child: UnlessEdgeClaimed(
+              claims: _backEdge,
+              child: _edgeDragArea(atEnd: false, sign: sign),
+            ),
           ),
         if (edgeDrag && hasEndDrawer)
           LayoutId(
@@ -745,9 +778,12 @@ class ScaffoldState extends State<Scaffold> with TickerProviderStateMixin {
           child: ScrollNotificationObserver(
             child: ScrollEdgeSourceScope(
               handle: _edgeSource,
-              child: FocusTraversalGroup(
-                policy: OrderedTraversalPolicy(),
-                child: layout,
+              child: BackEdgeScope(
+                claims: _backEdge,
+                child: FocusTraversalGroup(
+                  policy: OrderedTraversalPolicy(),
+                  child: layout,
+                ),
               ),
             ),
           ),

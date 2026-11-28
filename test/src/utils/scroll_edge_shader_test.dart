@@ -59,6 +59,22 @@ void main() {
       expect(edge.bottom, banner.bottom);
     });
 
+    testWidgets('with a row under its toolbar it keeps its edge at rest, '
+        'so the row stands on something over a photograph', (tester) async {
+      await pumpUna(
+        tester,
+        const Scaffold(
+          appBar: AppBar(
+            liquidGlass: LiquidGlassMode.always,
+            title: Text('Explore'),
+            bottom: SizedBox(height: 44, child: Text('Tabs')),
+          ),
+          body: SizedBox.expand(),
+        ),
+      );
+      expect(find.byType(ShaderScrollEdge), findsOneWidget);
+    });
+
     testWidgets('its edge rises with the scroll rather than popping in', (
       tester,
     ) async {

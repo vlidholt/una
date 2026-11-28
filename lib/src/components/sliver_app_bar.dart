@@ -284,7 +284,12 @@ class _SliverAppBarState extends State<SliverAppBar>
 
   void _onScrollingChanged() {
     final position = _position;
-    if (position == null || !_floats) return;
+    if (position == null) return;
+    if (widget._large && widget.pinned) {
+      _settleLarge(position);
+      return;
+    }
+    if (!_floats) return;
     if (position.isScrollingNotifier.value) {
       // The reader has it again.
       _snap.stop();
@@ -300,6 +305,32 @@ class _SliverAppBarState extends State<SliverAppBar>
     _snap
       ..jumpTo(hidden)
       ..animateTo(show ? 0 : full, spring: motion.snappy);
+  }
+
+  /// A large bar does not rest half collapsed, with its subtitle peeking
+  /// out between the toolbar and the page, as iOS's does not: when the page
+  /// stops it goes the rest of the way, collapsed if most of it is and the
+  /// page is long enough to let it, expanded otherwise.
+  void _settleLarge(ScrollPosition position) {
+    if (position.isScrollingNotifier.value) return;
+    final collapse = _scroll.collapse;
+    final expanded = _scroll.expandedExtent;
+    if (expanded <= 0 || collapse <= 0 || collapse >= expanded) return;
+    final rest = expanded - collapse;
+    final canCollapse = position.maxScrollExtent >= position.pixels + rest;
+    final target = collapse > expanded / 2 && canCollapse
+        ? position.pixels + rest
+        : position.pixels - collapse;
+    final motion = Motion.of(context);
+    if (motion.normal == Duration.zero) {
+      position.jumpTo(target);
+    } else {
+      position.animateTo(
+        target,
+        duration: motion.normal,
+        curve: motion.standard,
+      );
+    }
   }
 
   void _onSnapTick() {
@@ -341,7 +372,11 @@ class _SliverAppBarState extends State<SliverAppBar>
     // On Liquid Glass the scroll edge shows once content is under the bar,
     // as on iOS: at the top it would only blur the page's own first lines.
     // A solid bar is there at rest too, unless it is large.
-    final behavior = large || liquid
+    // A small bar on glass with a row under its toolbar keeps its edge at
+    // rest, as an `AppBar` does: the row would have nothing to stand on.
+    final behavior = liquid && !large && widget.bottom != null
+        ? AppBarSurfaceBehavior.always
+        : large || liquid
         ? AppBarSurfaceBehavior.whenScrolled
         : solid
         ? AppBarSurfaceBehavior.always

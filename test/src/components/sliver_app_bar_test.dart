@@ -315,6 +315,41 @@ void main() {
       }
     });
 
+    testWidgets('it does not rest half collapsed: let go part way, it goes '
+        'back or the rest of the way', (tester) async {
+      await pump(tester, page(large(expandedHeight: 200)));
+      final scrollable = find.byType(Scrollable).first;
+      double pixels() =>
+          tester.state<ScrollableState>(scrollable).position.pixels;
+      Future<void> settle() async {
+        for (var i = 0; i < 30; i++) {
+          await tester.pump(const Duration(milliseconds: 50));
+        }
+      }
+
+      // A little: back to expanded.
+      await tester.timedDrag(
+        scrollable,
+        const Offset(0, -40),
+        const Duration(seconds: 1),
+      );
+      await settle();
+      expect(pixels(), 0);
+      // Most of the way: collapsed.
+      await tester.timedDrag(
+        scrollable,
+        const Offset(0, -150),
+        const Duration(seconds: 1),
+      );
+      await settle();
+      final bar = tester.state(find.byType(SliverAppBar));
+      expect(pixels(), greaterThan(0));
+      expect(bar.mounted, isTrue);
+      final title = tester.getRect(largeTitle('Library'));
+      // The large title is wholly under the toolbar.
+      expect(title.bottom, lessThanOrEqualTo(toolbarHeight(tester) + 1));
+    });
+
     testWidgets('scrolling builds nothing in the bar', (tester) async {
       var builds = 0;
       await pump(

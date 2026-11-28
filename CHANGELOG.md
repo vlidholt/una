@@ -394,13 +394,17 @@ was measured from (Strand, until it moved), is its own repository,
   casts a soft shadow onto the actions it uncovers, stronger in dark
   themes, and none at rest.
 - **`GlassLevel.bar`**: the bars' own glass for a panel beside them — the
-  bottom bar's tint frosted, its untinted glass on Liquid Glass — so a
-  player above a tab bar reads as one of the bars.
+  bottom bar's tint frosted, its untinted glass on Liquid Glass, the
+  floating bar's corner radius and shadow — so a player above a tab bar
+  reads as one of the bars. `Glass.shadows` is nullable for it.
 - **A page's own bar finds the shell's drawer.** A page with its own
   `Scaffold` inside a navigator inside another scaffold — a destination
   with its own stack of pages — shows the menu button for the outer
   scaffold's drawer (and end drawer) on its root page, and the back
-  button above it. The app-structure guide has the recipe for a stack per
+  button above it. `Scaffold.withDrawerOf(context, end:)` finds that
+  scaffold for a button of your own. On iOS a swipe from the edge of a
+  pushed page goes back instead of opening the shell's drawer: the page
+  claims the edge from the scaffold around its navigator. The app-structure guide has the recipe for a stack per
   destination with URLs (`UnaApp.router`, `StatefulShellRoute`,
   `UnaPage`).
 
@@ -842,6 +846,12 @@ was measured from (Strand, until it moved), is its own repository,
   Glass bars rise over the first 32 points the page moves under them,
   instead of fading in on a timer as soon as anything was under them,
   which read as a blur popping in.
+- **A large bar does not rest half collapsed.** Let go part way, it goes
+  back to expanded or, if most of it is under and the page is long enough,
+  the rest of the way, as iOS's does.
+- **Tabs under a Liquid Glass bar stand on its edge.** A glass bar with a
+  `bottom` keeps its soft edge at rest; over a photograph the tabs had
+  nothing under them.
 - **A floating bottom bar with labels lights the label too**: its lens
   and hover wash take in the icon and its label, as on Liquid Glass. A
   docked bar keeps Material's pill behind the icon.
@@ -852,6 +862,12 @@ was measured from (Strand, until it moved), is its own repository,
   a decoration's `border` (a pill-shaped field) now shapes its focused
   and error borders and its ring too; the ring stayed at the theme's
   radius, a rounded rectangle round a pill.
+- **A sliver bar's soft edge in a browser keeps the page and blurs it.**
+  Snapshotting the page from inside it, mid-scene, took the page's
+  content out of later frames (an article vanished as its bar
+  collapsed); such an edge snapshots after the frame and draws it in the
+  next. And the blur is laid over the page colour: text on a plain page
+  blurred to near nothing and stayed sharp beneath the edge.
 - **A gradient or image in a superellipse stays put on the web.** Flutter
   fills a `RoundedSuperellipseBorder` with `drawRSuperellipse`, which in a
   browser moves a shader with the shape's centre; una's superellipse

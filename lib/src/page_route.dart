@@ -9,6 +9,7 @@ import 'package:flutter/widgets.dart';
 import 'package:una/src/theme/form_factor.dart';
 import 'package:una/src/theme/motion.dart';
 import 'package:una/src/theme/theme.dart';
+import 'package:una/src/utils/back_edge_claims.dart';
 import 'package:una/src/utils/entrance.dart';
 import 'package:una/src/utils/route_on_top.dart';
 
@@ -645,6 +646,18 @@ class _BackGestureDetectorState extends State<_BackGestureDetector>
 
   HorizontalDragGestureRecognizer? _recognizer;
 
+  /// The scaffold around this page's navigator, whose drawer would
+  /// otherwise take the start edge: a shell's route never pops, so it
+  /// cannot tell from its own route that the edge is the way back here.
+  BackEdgeClaims? _edgeClaims;
+
+  bool _claimsEdge() =>
+      mounted &&
+      widget.swipe &&
+      widget.route.isCurrent &&
+      widget.route.popGestureEnabled &&
+      _onTop;
+
   @override
   void initState() {
     super.initState();
@@ -652,7 +665,17 @@ class _BackGestureDetectorState extends State<_BackGestureDetector>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final claims = BackEdgeScope.maybeOf(context);
+    if (identical(claims, _edgeClaims)) return;
+    _edgeClaims?.remove(_claimsEdge);
+    _edgeClaims = claims?..add(_claimsEdge);
+  }
+
+  @override
   void dispose() {
+    _edgeClaims?.remove(_claimsEdge);
     WidgetsBinding.instance.removeObserver(this);
     _recognizer?.dispose();
     // The navigator may not be told while the tree is being torn down.

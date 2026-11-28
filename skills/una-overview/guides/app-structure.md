@@ -361,7 +361,10 @@ URLs on the web, use a router: `UnaApp.router` and `go_router`'s
   or `SliverAppBar.large`, its banner and its content. Leave `leading`
   out: the bar shows the back button on a pushed page, and on a
   destination's root the menu button for the shell's drawer — it finds
-  the drawer on the scaffold around the navigator.
+  the drawer on the scaffold around the navigator
+  (`Scaffold.withDrawerOf(context, end: true)?.openEndDrawer()` for a
+  button of your own). On iOS the edge swipe of a pushed page goes back;
+  on a root page it opens the shell's drawer.
 - **Every route returns an `UnaPage`** from `pageBuilder`, for una's
   transition and back gestures (go_router only knows Material's and
   Cupertino's apps; anything else gets no transition).

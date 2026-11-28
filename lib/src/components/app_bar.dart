@@ -205,9 +205,13 @@ class AppBar extends StatelessWidget {
     final topInset = primary ? appBarTopInset(context, liquid: liquid) : 0.0;
     // On Liquid Glass the scroll edge shows once content is under the bar,
     // as on iOS: at the top it would only blur the page's own first lines.
-    // A solid bar is there at rest too.
+    // Not with a row under the toolbar: tabs over a photograph had nothing
+    // to stand on, so that bar keeps its edge. A solid bar is there at rest
+    // too.
     final behavior = liquid
-        ? AppBarSurfaceBehavior.whenScrolled
+        ? bottom == null
+              ? AppBarSurfaceBehavior.whenScrolled
+              : AppBarSurfaceBehavior.always
         : solid
         ? AppBarSurfaceBehavior.always
         : surfaceBehavior ??

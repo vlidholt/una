@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 
 // The soft scroll edge of a Liquid Glass bar where the renderer has no
@@ -21,6 +22,13 @@ import 'package:flutter/widgets.dart';
 // inside that page (a `SliverAppBar`) keeps itself out of the picture with
 // a `ScrollEdgeExclusion`, or its own buttons would be blurred into its
 // edge.
+//
+// Not for an edge inside the page it snapshots (a `SliverAppBar`'s): a
+// snapshot taken while that page is halfway into the scene took its
+// content out of the frames that followed, and an article vanished as its
+// bar collapsed. That edge takes its snapshot after the frame and draws it
+// in the next, asking for one more frame so that the page at rest is what
+// it shows: a frame late, under a blur.
 
 /// The fragment program, loaded once for the app.
 abstract final class ScrollEdgeShader {
@@ -340,6 +348,16 @@ class _RenderShaderScrollEdge extends RenderBox {
   @override
   bool get alwaysNeedsCompositing => true;
 
+  /// Whether this edge is inside the page it snapshots.
+  bool _isInside(RenderObject source) {
+    var node = parent;
+    while (node != null) {
+      if (identical(node, source)) return true;
+      node = node.parent;
+    }
+    return false;
+  }
+
   @override
   void paint(PaintingContext context, Offset offset) {
     if (_strength <= 0 || size.isEmpty) {
@@ -358,6 +376,7 @@ class _RenderShaderScrollEdge extends RenderBox {
     layer
       ..rect = offset & size
       ..source = source
+      ..deferred = source != null && _isInside(source)
       ..region = region
       ..color = _color
       ..sigma = _maxSigma * _strength
@@ -376,9 +395,54 @@ class _ScrollEdgeLayer extends Layer {
   double veilAlpha = 0;
   bool fromBottom = false;
 
+  /// Whether the snapshot is taken after the frame rather than while the
+  /// scene is built: the edge is inside the page it snapshots.
+  bool deferred = false;
+
   ui.FragmentShader? _shader;
   ui.Image? _image;
   ui.Picture? _picture;
+
+  /// A deferred edge's snapshot, taken after the last frame, for the next.
+  ui.Image? _next;
+  bool _snapshotScheduled = false;
+  bool _followUp = false;
+
+  void _snapshotAfterFrame() {
+    if (_snapshotScheduled) return;
+    _snapshotScheduled = true;
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      _snapshotScheduled = false;
+      final source = this.source;
+      final region = this.region;
+      if (!attached ||
+          source == null ||
+          !source.attached ||
+          region == null ||
+          region.isEmpty) {
+        return;
+      }
+      ui.Image? image;
+      _taking = true;
+      try {
+        image = source.snapshot(region, ScrollEdgeShader.texScale);
+      } finally {
+        _taking = false;
+      }
+      if (image == null) return;
+      _next?.dispose();
+      _next = image;
+      // One more frame to show it: the page may have moved in the frame
+      // just drawn. Not after a frame that was only that, or it would
+      // never stop.
+      if (_followUp) {
+        _followUp = false;
+      } else {
+        _followUp = true;
+        SchedulerBinding.instance.scheduleFrame();
+      }
+    });
+  }
 
   // Drawn anew every frame: the page under it may have moved without the
   // edge being painted again.
@@ -395,12 +459,19 @@ class _ScrollEdgeLayer extends Layer {
     final source = this.source;
     final region = this.region;
     ui.Image? image;
-    if (program != null &&
+    final ready =
+        program != null &&
         source != null &&
         source.attached &&
         region != null &&
         !region.isEmpty &&
-        sigma > 0) {
+        sigma > 0;
+    if (ready && deferred) {
+      // Last frame's snapshot, or the one shown until a newer is taken.
+      image = _next ?? _image;
+      _next = null;
+      _snapshotAfterFrame();
+    } else if (ready) {
       _taking = true;
       try {
         image = source.snapshot(region, ScrollEdgeShader.texScale);
@@ -418,6 +489,12 @@ class _ScrollEdgeLayer extends Layer {
         ..setFloat(4, sigma)
         ..setFloat(5, ScrollEdgeShader.texScale)
         ..setFloat(6, fromBottom ? 1 : 0)
+        // The page colour, premultiplied, opaque: the snapshot holds the
+        // page's content, not the background it is painted on.
+        ..setFloat(7, color.r)
+        ..setFloat(8, color.g)
+        ..setFloat(9, color.b)
+        ..setFloat(10, 1)
         ..setImageSampler(0, image);
       canvas.drawRect(rect, Paint()..shader = shader);
     }
@@ -442,9 +519,10 @@ class _ScrollEdgeLayer extends Layer {
 
     final picture = recorder.endRecording();
     builder.addPicture(Offset.zero, picture);
-    // Last frame's are no longer drawn.
+    // Last frame's are no longer drawn — unless a deferred edge showed the
+    // same snapshot again.
     _picture?.dispose();
-    _image?.dispose();
+    if (!identical(_image, image)) _image?.dispose();
     _picture = picture;
     _image = image;
   }
@@ -453,6 +531,8 @@ class _ScrollEdgeLayer extends Layer {
   void dispose() {
     _picture?.dispose();
     _image?.dispose();
+    _next?.dispose();
+    _next = null;
     _shader?.dispose();
     _picture = null;
     _image = null;
