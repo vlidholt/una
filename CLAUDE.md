@@ -325,14 +325,28 @@ componentTheme.liquidGlass)` at build: never a window width, never cached.
   (`UnlessEdgeClaimed`) takes no hit while one is made. Asked at hit
   test: nothing rebuilds when pages come and go. Its own route's
   `canPopOf` cannot tell: a shell's route never pops.
-- **A Liquid Glass toolbar is a `Hero`** (`app_bar_morph.dart`,
-  internal), tagged with its navigator, carrying its raw parts
-  (`BarMorphData`: leading, title, actions before they go on capsules).
-  The flight draws one `AppBarToolbar` in place: one capsule per end whose
-  content is a `_CrossSize` (both children laid out, the box eased between
-  their sizes, each faded), a capsule only one side has faded through
-  `BackdropFadeHost` and scaled, titles crossed at the middle. Only the
-  toolbar flies; the edge and a `bottom` row go with their page. A nested
+- **A Liquid Glass toolbar is a `Hero`** (`BarMorph`,
+  `app_bar_morph.dart`, internal), tagged with its navigator, carrying
+  its glass's raw parts (`BarMorphData`: a leading *button* and the
+  actions, before they go on capsules). Only the glass flies: the
+  hero's `placeholderBuilder` is the toolbar itself under `_InFlight`,
+  which hides its capsules (`Visibility`, size kept), so the title and
+  a leading logo go with the page; the toolbar is under a `GlobalKey`,
+  so moving into the placeholder keeps its state. **A pop's shuttle gets
+  the route's animation running 1 → 0 with `from` the page leaving**:
+  the flight plays forward on `q` (push: the top route's value; pop:
+  1 − it), never the push rewound — reading it the other way showed the
+  page below's buttons first and snapped at the end. The timings are
+  `liquid_glass_widgets`' `GlassNavPinnedMetrics` (`_Choreography`):
+  shape on `motion.bouncy` from `q` .03, swell .22 over the first .6
+  and squeeze by the overshoot, cross-fade .25–.6 with the outgoing
+  glyph blurred to 6 and the incoming from 3.5, a lone capsule
+  materializing over .45–1 or dissolving over 0–.55. Buttons match by
+  slot from the capsule's anchored end and hold still when
+  `_sameButton`. Under a swipe the top route is still active: the
+  chrome holds at `q` 0, and once it is popped cross-fades over the
+  rest. `_RenderCluster` reports its swell in `applyPaintTransform`.
+  The edge and a `bottom` row go with their page. A nested
   navigator needs a `HeroController` (go_router's shells have one); a
   filled bar is no hero. On iOS and macOS at the phone and tablet form
   factors the route itself is the platform's whole-width slide

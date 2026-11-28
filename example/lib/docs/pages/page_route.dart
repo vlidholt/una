@@ -16,9 +16,10 @@ final pageRouteDoc = ComponentDoc(
       "pixels' rise on a desktop, on the theme's motion. A page can be "
       'taken back with a gesture: a drag from its start edge on iOS and '
       'macOS (with the mouse too on a Mac), and a preview of the '
-      'predictive back gesture on Android. On Liquid Glass the bar stays '
-      "in place and turns into the next page's. `UnaPage` is the same "
-      'route for a declared page list.',
+      'predictive back gesture on Android. On Liquid Glass the back '
+      "button and the actions stay in place and turn into the next page's "
+      'while the title goes with its page, as on iOS 26. `UnaPage` is the '
+      'same route for a declared page list.',
   examples: [
     ComponentExample(
       id: 'page_route_push',

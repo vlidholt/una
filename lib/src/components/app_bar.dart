@@ -241,38 +241,36 @@ class AppBar extends StatelessWidget {
     }
     final buttonVariant = appBarButtonVariant(material: material);
     final centered = centerTitle ?? bar.centerTitle ?? false;
-    Widget toolbar = AppBarToolbar(
-      height: toolbarHeight,
-      leading: effectiveLeading,
-      buttonVariant: buttonVariant,
-      title: title,
-      middle: middle,
-      actions: effectiveActions,
-      centerTitle: centered,
-      padding: padding,
-      maxWidth: maxWidth,
-      gap: gap,
-      actionsGap: actionsGap,
-    );
-    // On Liquid Glass the toolbar stays in place between two pages and
-    // turns into the next page's, as iOS 26's does.
-    if (liquid && middle == null) {
-      toolbar = BarMorph(
-        data: BarMorphData(
-          height: toolbarHeight,
-          leading: rawLeading,
-          title: title,
-          actions: rawActions,
-          buttonVariant: buttonVariant,
-          centerTitle: centered,
-          padding: padding,
-          maxWidth: maxWidth,
-          gap: gap,
-          actionsGap: actionsGap,
-        ),
-        child: toolbar,
-      );
-    }
+    // On Liquid Glass the toolbar's capsules stay in place between two
+    // pages and turn into the next page's, as iOS 26's do.
+    final toolbar = liquid && middle == null
+        ? BarMorph(
+            height: toolbarHeight,
+            leading: effectiveLeading,
+            rawLeading: rawLeading,
+            title: title,
+            actions: effectiveActions,
+            rawActions: rawActions,
+            buttonVariant: buttonVariant,
+            centerTitle: centered,
+            padding: padding,
+            maxWidth: maxWidth,
+            gap: gap,
+            actionsGap: actionsGap,
+          )
+        : AppBarToolbar(
+            height: toolbarHeight,
+            leading: effectiveLeading,
+            buttonVariant: buttonVariant,
+            title: title,
+            middle: middle,
+            actions: effectiveActions,
+            centerTitle: centered,
+            padding: padding,
+            maxWidth: maxWidth,
+            gap: gap,
+            actionsGap: actionsGap,
+          );
     final content = bottom == null
         ? toolbar
         : Column(

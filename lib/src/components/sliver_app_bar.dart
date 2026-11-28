@@ -429,42 +429,40 @@ class _SliverAppBarState extends State<SliverAppBar>
           )
         : title;
     final centered = widget.centerTitle ?? bar.centerTitle ?? false;
-    Widget toolbarRow = AppBarToolbar(
-      // A floor, as in an `AppBar`: a line of scaled text that needs more
-      // room gets it.
-      height: toolbarHeight,
-      leading: leading,
-      // Over a picture a bare glyph would be lost: the buttons are
-      // discs, there and once the bar has collapsed over the picture.
-      buttonVariant: buttonVariant,
-      title: smallTitle,
-      middle: widget.middle,
-      actions: actions,
-      centerTitle: centered,
-      padding: widget.padding,
-      maxWidth: widget.maxWidth,
-      gap: widget.gap,
-      actionsGap: widget.actionsGap,
-    );
-    // On Liquid Glass the toolbar stays in place between two pages and
-    // turns into the next page's, as iOS 26's does.
-    if (liquid && widget.middle == null) {
-      toolbarRow = BarMorph(
-        data: BarMorphData(
-          height: toolbarHeight,
-          leading: rawLeading,
-          title: smallTitle,
-          actions: rawActions,
-          buttonVariant: buttonVariant,
-          centerTitle: centered,
-          padding: widget.padding,
-          maxWidth: widget.maxWidth,
-          gap: widget.gap,
-          actionsGap: widget.actionsGap,
-        ),
-        child: toolbarRow,
-      );
-    }
+    // On Liquid Glass the toolbar's capsules stay in place between two
+    // pages and turn into the next page's, as iOS 26's do.
+    final toolbarRow = liquid && widget.middle == null
+        ? BarMorph(
+            height: toolbarHeight,
+            leading: leading,
+            rawLeading: rawLeading,
+            title: smallTitle,
+            actions: actions,
+            rawActions: rawActions,
+            buttonVariant: buttonVariant,
+            centerTitle: centered,
+            padding: widget.padding,
+            maxWidth: widget.maxWidth,
+            gap: widget.gap,
+            actionsGap: widget.actionsGap,
+          )
+        : AppBarToolbar(
+            // A floor, as in an `AppBar`: a line of scaled text that needs
+            // more room gets it.
+            height: toolbarHeight,
+            leading: leading,
+            // Over a picture a bare glyph would be lost: the buttons are
+            // discs, there and once the bar has collapsed over the picture.
+            buttonVariant: buttonVariant,
+            title: smallTitle,
+            middle: widget.middle,
+            actions: actions,
+            centerTitle: centered,
+            padding: widget.padding,
+            maxWidth: widget.maxWidth,
+            gap: widget.gap,
+            actionsGap: widget.actionsGap,
+          );
     Widget toolbar = Padding(
       padding: EdgeInsets.only(top: topInset),
       child: toolbarRow,

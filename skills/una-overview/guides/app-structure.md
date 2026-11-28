@@ -332,12 +332,14 @@ Navigator.of(context).push(
 ```
 
 - A pushed page has its own `Scaffold` and `AppBar`; the bar shows the
-  back button by itself. On Liquid Glass the bar does not move with the
-  page: it stays in place and turns into the next page's — titles
-  crossing, capsules growing or shrinking to the next buttons, the back
-  button materializing — as iOS 26's does, and a swipe back carries it
-  with the finger. A filled bar moves with its page, as Material's
-  does.
+  back button by itself. On Liquid Glass the bar's glass does not move
+  with the page: the back button and the actions stay in place and turn
+  into the next page's — a capsule reshaping to the next buttons on a
+  spring, a changed button blurring into its successor, one both pages
+  have holding still, the back button materializing — while the title
+  goes with its page, as on iOS 26. Under a swipe back the glass holds
+  still until the swipe is let go. A filled bar moves with its page, as
+  Material's does.
 - `fullscreenDialog: true` slides the page up and gives its bar a close
   button: a compose screen, a search on a phone.
 - Back gestures are on: a drag from the start edge on iOS and macOS (the

@@ -850,12 +850,18 @@ was measured from (Strand, until it moved), is its own repository,
   draws it there: on a phone or a tablet the page slides the whole width
   in, with a soft shadow, and the page under it moves a third aside. The
   edge swipe back is on for macOS as well, with the mouse too.
-- **A Liquid Glass bar stays in place between pages and turns into the
-  next one's**, as iOS 26's does: the toolbar is a hero tagged with its
-  navigator, and its flight crosses the titles, eases each capsule's
-  width from one page's buttons to the next while they cross-fade, and
-  materializes the back button. A swipe back carries it with the finger.
-  A filled bar moves with its page, as Material's does.
+- **A Liquid Glass bar's glass stays in place between pages and turns
+  into the next one's**, as iOS 26's does, while the title goes with its
+  page. The toolbar is a hero tagged with its navigator whose
+  placeholder is the toolbar itself with its capsules hidden. The
+  flight plays the choreography `liquid_glass_widgets` measured from
+  iOS 26, forward towards the page being entered on a pop too: a
+  capsule reshapes on a spring that swells and lands with the page, a
+  changed button blurs away as its successor sharpens in, a button both
+  pages have holds still, and a capsule only one page has materializes
+  or dissolves. A swipe back holds the glass still until it is let go,
+  then cross-fades. A filled bar moves with its page, as Material's
+  does.
 - **A large bar does not rest half collapsed.** Let go part way, it goes
   back to expanded or, if most of it is under and the page is long enough,
   the rest of the way, as iOS's does.
