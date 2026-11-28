@@ -335,8 +335,9 @@ class UnaApp extends StatefulWidget {
   /// correctly animate between pages, and to represent the "return value" of
   /// a route (e.g. which button a user selected in a modal dialog).
   ///
-  /// Defaults to a [UnaPageRoute]: a short slide and fade, with the
-  /// iOS back swipe and the preview of the predictive back gesture on
+  /// Defaults to a [UnaPageRoute]: the platform's whole-width slide on
+  /// iOS and macOS, a short slide and fade elsewhere, with the back swipe
+  /// on iOS and macOS and the preview of the predictive back gesture on
   /// Android. Pass a `MaterialPageRoute` or a `CupertinoPageRoute` here for
   /// their platform transitions instead.
   ///

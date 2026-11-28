@@ -4,6 +4,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:una/src/components/app_bar_layout.dart';
+import 'package:una/src/components/app_bar_morph.dart';
 import 'package:una/src/liquid_glass/liquid_glass.dart';
 import 'package:una/src/liquid_glass/liquid_glass_theme.dart';
 import 'package:una/src/theme/components/app_bar.dart';
@@ -393,6 +394,10 @@ class _SliverAppBarState extends State<SliverAppBar>
     var actions = widget.automaticallyImplyActions
         ? impliedActions(context, widget.actions)
         : widget.actions;
+    // The parts before they go on capsules, for the bar's flight to the
+    // next page's on Liquid Glass.
+    final rawLeading = leading;
+    final rawActions = actions;
     if (liquid) {
       (leading, actions) = liquidGlassBarSlots(
         context,
@@ -406,39 +411,63 @@ class _SliverAppBarState extends State<SliverAppBar>
     // below it, rather than floating its buttons on the picture: in a
     // browser there is no status bar for them to hang under.
     final filledOverPicture = solid && large && widget.background != null;
+    final toolbarHeight = appBarToolbarHeight(
+      context,
+      appBarStyleHeight(context, widget.height, liquid: liquid),
+    );
+    final buttonVariant = appBarButtonVariant(
+      material: material,
+      overPicture: widget.background != null && !filledOverPicture,
+    );
+    // In a large bar the small title is there for assistive technology
+    // all along, and for the eye once the large one has gone under.
+    final smallTitle = large && title != null
+        ? FadeTransition(
+            opacity: _smallTitle,
+            alwaysIncludeSemantics: true,
+            child: title,
+          )
+        : title;
+    final centered = widget.centerTitle ?? bar.centerTitle ?? false;
+    Widget toolbarRow = AppBarToolbar(
+      // A floor, as in an `AppBar`: a line of scaled text that needs more
+      // room gets it.
+      height: toolbarHeight,
+      leading: leading,
+      // Over a picture a bare glyph would be lost: the buttons are
+      // discs, there and once the bar has collapsed over the picture.
+      buttonVariant: buttonVariant,
+      title: smallTitle,
+      middle: widget.middle,
+      actions: actions,
+      centerTitle: centered,
+      padding: widget.padding,
+      maxWidth: widget.maxWidth,
+      gap: widget.gap,
+      actionsGap: widget.actionsGap,
+    );
+    // On Liquid Glass the toolbar stays in place between two pages and
+    // turns into the next page's, as iOS 26's does.
+    if (liquid && widget.middle == null) {
+      toolbarRow = BarMorph(
+        data: BarMorphData(
+          height: toolbarHeight,
+          leading: rawLeading,
+          title: smallTitle,
+          actions: rawActions,
+          buttonVariant: buttonVariant,
+          centerTitle: centered,
+          padding: widget.padding,
+          maxWidth: widget.maxWidth,
+          gap: widget.gap,
+          actionsGap: widget.actionsGap,
+        ),
+        child: toolbarRow,
+      );
+    }
     Widget toolbar = Padding(
       padding: EdgeInsets.only(top: topInset),
-      child: AppBarToolbar(
-        // A floor, as in an `AppBar`: a line of scaled text that needs more
-        // room gets it.
-        height: appBarToolbarHeight(
-          context,
-          appBarStyleHeight(context, widget.height, liquid: liquid),
-        ),
-        leading: leading,
-        // Over a picture a bare glyph would be lost: the buttons are
-        // discs, there and once the bar has collapsed over the picture.
-        buttonVariant: appBarButtonVariant(
-          material: material,
-          overPicture: widget.background != null && !filledOverPicture,
-        ),
-        // In a large bar the small title is there for assistive technology
-        // all along, and for the eye once the large one has gone under.
-        title: large && title != null
-            ? FadeTransition(
-                opacity: _smallTitle,
-                alwaysIncludeSemantics: true,
-                child: title,
-              )
-            : title,
-        middle: widget.middle,
-        actions: actions,
-        centerTitle: widget.centerTitle ?? bar.centerTitle ?? false,
-        padding: widget.padding,
-        maxWidth: widget.maxWidth,
-        gap: widget.gap,
-        actionsGap: widget.actionsGap,
-      ),
+      child: toolbarRow,
     );
 
     if (filledOverPicture) toolbar = ColoredBox(color: fill, child: toolbar);

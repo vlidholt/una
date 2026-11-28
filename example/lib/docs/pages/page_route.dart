@@ -8,12 +8,17 @@ final pageRouteDoc = ComponentDoc(
   title: 'Page Route',
   description:
       'How one page replaces another. `UnaPageRoute` is the route '
-      '`UnaApp` pushes by default: a short slide and a fade on the '
-      "theme's motion, from the end side on a phone and a few pixels' "
-      'rise on a desktop. A page can be taken back with a gesture: a '
-      'drag from its start edge on iOS, and a preview of the predictive '
-      'back gesture on Android. `UnaPage` is the same route for a '
-      'declared page list.',
+      '`UnaApp` pushes by default. On iOS and macOS, on a phone or a '
+      "tablet, it is the platform's push, as Material's route draws it "
+      'there: the page slides the whole width in over the one under it, '
+      'which moves a third of the way aside. Elsewhere it is a short '
+      'slide and a fade from the end side on a phone, and a few '
+      "pixels' rise on a desktop, on the theme's motion. A page can be "
+      'taken back with a gesture: a drag from its start edge on iOS and '
+      'macOS (with the mouse too on a Mac), and a preview of the '
+      'predictive back gesture on Android. On Liquid Glass the bar stays '
+      "in place and turns into the next page's. `UnaPage` is the same "
+      'route for a declared page list.',
   examples: [
     ComponentExample(
       id: 'page_route_push',

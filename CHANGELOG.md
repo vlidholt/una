@@ -846,6 +846,16 @@ was measured from (Strand, until it moved), is its own repository,
   Glass bars rise over the first 32 points the page moves under them,
   instead of fading in on a timer as soon as anything was under them,
   which read as a blur popping in.
+- **On iOS and macOS a push is the platform's**, as Material's route
+  draws it there: on a phone or a tablet the page slides the whole width
+  in, with a soft shadow, and the page under it moves a third aside. The
+  edge swipe back is on for macOS as well, with the mouse too.
+- **A Liquid Glass bar stays in place between pages and turns into the
+  next one's**, as iOS 26's does: the toolbar is a hero tagged with its
+  navigator, and its flight crosses the titles, eases each capsule's
+  width from one page's buttons to the next while they cross-fade, and
+  materializes the back button. A swipe back carries it with the finger.
+  A filled bar moves with its page, as Material's does.
 - **A large bar does not rest half collapsed.** Let go part way, it goes
   back to expanded or, if most of it is under and the page is long enough,
   the rest of the way, as iOS's does.

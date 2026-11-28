@@ -6,6 +6,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:una/src/theme/data.dart';
 import 'package:una/src/theme/form_factor.dart';
 import 'package:una/src/theme/motion.dart';
 import 'package:una/src/theme/theme.dart';
@@ -13,21 +14,25 @@ import 'package:una/src/utils/back_edge_claims.dart';
 import 'package:una/src/utils/entrance.dart';
 import 'package:una/src/utils/route_on_top.dart';
 
-/// The page route `UnaApp` uses by default: the new page fades in while
-/// it moves a short way into place, and leaves the same way, faster.
+/// The page route `UnaApp` uses by default.
 ///
-/// On a phone it comes in from the end side — the right, in a left-to-right
-/// layout — and the page under it gives way a little; a [fullscreenDialog]
-/// rises from below. On a desktop, where a page is not a sheet of paper,
-/// it only rises a few pixels. The timing is the theme's `Motion`: with
-/// reduced motion the page only fades, and with `Motion.none` it is simply
-/// there.
+/// On iOS and macOS, on a phone or a tablet, it is the platform's push, as
+/// Material's route draws it there: the page slides the whole width in
+/// from the end side — the right, in a left-to-right layout — casting a
+/// soft shadow on the page under it, which moves a third of the way out
+/// of its way. Elsewhere on a phone the new page fades in while it moves a
+/// short way into place, and the page under it gives way a little. A
+/// [fullscreenDialog] rises from below. On a desktop, where a page is not a
+/// sheet of paper, it only rises a few pixels. The timing is the theme's
+/// `Motion`: with reduced motion the page only fades, and with
+/// `Motion.none` it is simply there.
 ///
 /// ## Going back with a gesture
 ///
-/// On iOS the page can be dragged away from its start edge — the left, in
-/// a left-to-right layout. It follows the finger; let go past the middle,
-/// or flick it, and it leaves, otherwise it springs back. On Android the
+/// On iOS and macOS the page can be dragged away from its start edge — the
+/// left, in a left-to-right layout; on a Mac with the mouse as well. It
+/// follows the finger; let go past the middle, or flick it, and it leaves,
+/// otherwise it springs back. On Android the
 /// system's predictive back gesture is previewed: the page shrinks a little
 /// with rounded corners while the finger is down, and leaves when the
 /// gesture is committed. Neither is offered to a [fullscreenDialog], to the
@@ -54,7 +59,8 @@ class UnaPageRoute<T> extends PageRoute<T> {
 
   /// Whether the page can be taken back with a gesture.
   ///
-  /// Null follows the platform: the swipe from the start edge on iOS, and
+  /// Null follows the platform: the swipe from the start edge on iOS and
+  /// macOS, and
   /// the preview of the predictive back gesture wherever the system reports
   /// one (Android). True also offers the edge swipe on every other
   /// platform; false switches both off, and the system's back then pops
@@ -70,8 +76,18 @@ class UnaPageRoute<T> extends PageRoute<T> {
 
   /// Whether a drag from the start edge takes this page back.
   bool get _swipes =>
+      !fullscreenDialog && (backGesture ?? _isApple(defaultTargetPlatform));
+
+  static bool _isApple(TargetPlatform platform) =>
+      platform == TargetPlatform.iOS || platform == TargetPlatform.macOS;
+
+  /// Whether the push is the platform's whole-width slide: iOS and macOS,
+  /// on a phone or a tablet, with motion, and not a dialog.
+  bool _slidesIn(ThemeData theme, Motion motion) =>
       !fullscreenDialog &&
-      (backGesture ?? defaultTargetPlatform == TargetPlatform.iOS);
+      !motion.reduced &&
+      theme.formFactor != FormFactor.desktop &&
+      _isApple(defaultTargetPlatform);
 
   /// Whether a predictive back gesture is previewed on this page.
   bool get _previews => !fullscreenDialog && (backGesture ?? true);
@@ -96,7 +112,13 @@ class UnaPageRoute<T> extends PageRoute<T> {
   Duration get transitionDuration {
     final motion = _motion;
     if (motion == null) return const Duration(milliseconds: 200);
-    return motion.reduced ? motion.fast : motion.snappy.settleDuration;
+    if (motion.reduced) return motion.fast;
+    final theme = Theme.maybeOf(navigator!.context, listen: false);
+    // A whole page travelling the whole width is a surface: the smooth
+    // spring, not the snappy one.
+    return theme != null && _slidesIn(theme, motion)
+        ? motion.smooth.settleDuration
+        : motion.snappy.settleDuration;
   }
 
   // It leaves faster than it arrives.
@@ -358,9 +380,14 @@ class UnaPageRoute<T> extends PageRoute<T> {
     final side = Directionality.maybeOf(context) == TextDirection.rtl
         ? -1.0
         : 1.0;
+    final slides = _slidesIn(theme, motion);
     // In on the spring, and back out in a straight line from wherever it
     // is, so a pop in the middle of a push does not jump.
-    final enter = motion.reduced ? motion.standard : motion.snappy.curve;
+    final enter = motion.reduced
+        ? motion.standard
+        : slides
+        ? motion.smooth.curve
+        : motion.snappy.curve;
     var animations = _animations;
     if (animations == null ||
         !animations.isFor(
@@ -384,23 +411,33 @@ class UnaPageRoute<T> extends PageRoute<T> {
       // Only the fade.
     } else if (fullscreenDialog) {
       rise = mobile ? 48 : motion.overlayTravel * 2;
+    } else if (slides) {
+      slide = side;
     } else if (mobile) {
       slide = .2 * side;
     } else {
       rise = motion.overlayTravel * 2;
     }
     // The page under this one gives way as the next is pushed over it.
-    final giveWay = motion.reduced || !mobile || _coveredByDialog
+    final giveWay = motion.reduced || _coveredByDialog
+        ? 0.0
+        : slides
+        ? -side / 3
+        : !mobile
         ? 0.0
         : -.06 * side;
 
     // Everything below is the same widget from one tick to the next, holding
     // the same animations: updating it is a handful of comparisons, and the
     // movement itself is paint.
-    var fade = animations.fade;
+    // The platform's slide is not faded: the page is a sheet moving over
+    // the one under it, with its shadow while it moves.
+    var fade = slides ? kAlwaysCompleteAnimation : animations.fade;
     Animation<double> progress = animations.progress;
     Animation<double>? pull;
-    Color? edgeShadow;
+    var edgeShadow = slides && !animation.isCompleted
+        ? _edgeShadow(theme.brightness)
+        : null;
     switch (_phase) {
       case _BackPhase.none:
         break;
@@ -732,12 +769,15 @@ class _BackGestureDetectorState extends State<_BackGestureDetector>
     final recognizer = _recognizer ??=
         HorizontalDragGestureRecognizer(
             debugOwner: this,
-            // A finger or a pen. A mouse drags to select, and a trackpad
-            // swipe is the system's.
-            supportedDevices: const {
+            // A finger or a pen; on a Mac the mouse too, as Material's
+            // route there takes it. Elsewhere a mouse drags to select, and
+            // a trackpad swipe is the system's.
+            supportedDevices: {
               PointerDeviceKind.touch,
               PointerDeviceKind.stylus,
               PointerDeviceKind.invertedStylus,
+              if (defaultTargetPlatform == TargetPlatform.macOS)
+                PointerDeviceKind.mouse,
             },
           )
           ..onStart = ((_) => widget.route._swipeStart())

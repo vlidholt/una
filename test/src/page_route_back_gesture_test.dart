@@ -200,13 +200,14 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byKey(_page), findsOneWidget);
       expect(_navigator.currentState!.userGestureInProgress, isFalse);
-      // And it is the ordinary transition again: a pop fades.
+      // And it is the ordinary transition again: on iOS the platform's
+      // push, a slide with no fade.
       _navigator.currentState!.pop();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 120));
       final leaving = _painted(tester, find.byKey(_page));
-      expect(leaving.opacity, lessThan(1));
-      expect(leaving.offset.dx, lessThan(78));
+      expect(leaving.opacity, 1);
+      expect(leaving.offset.dx, greaterThan(0));
       await tester.pumpAndSettle();
       debugDefaultTargetPlatformOverride = null;
     });
@@ -332,11 +333,10 @@ void main() {
       debugDefaultTargetPlatformOverride = null;
     });
 
-    testWidgets('follows the platform: off away from iOS unless asked '
-        'for', (tester) async {
+    testWidgets('follows the platform: off away from iOS and macOS unless '
+        'asked for', (tester) async {
       for (final platform in [
         TargetPlatform.android,
-        TargetPlatform.macOS,
         TargetPlatform.windows,
       ]) {
         debugDefaultTargetPlatformOverride = platform;
@@ -357,6 +357,65 @@ void main() {
         await tester.pumpWidget(const SizedBox.shrink());
       }
       debugDefaultTargetPlatformOverride = null;
+    });
+
+    testWidgets("on iOS a push is the platform's: the page slides the whole "
+        'width, unfaded, and the one under it moves a third out of its way', (
+      tester,
+    ) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      try {
+        _phone(tester);
+        await tester.pumpWidget(_app());
+        await tester.pump(const Duration(milliseconds: 300));
+        _navigator.currentState!.push(
+          UnaPageRoute<void>(
+            builder: (_) => const SizedBox.expand(key: _page),
+          ),
+        );
+        await tester.pump();
+        await tester.pump(_frame);
+        await tester.pump(_frame);
+        final arriving = _painted(tester, find.byKey(_page));
+        expect(arriving.opacity, 1);
+        expect(arriving.offset.dx, greaterThan(195));
+        // Most of the way in, the page under it is well on its way out.
+        for (var i = 0; i < 8; i++) {
+          await tester.pump(_frame);
+        }
+        final home = _painted(tester, find.byKey(_home, skipOffstage: false));
+        expect(home.offset.dx, lessThan(-40));
+        expect(home.offset.dx, greaterThanOrEqualTo(-390 / 3 - 1));
+        await tester.pumpAndSettle();
+        expect(_painted(tester, find.byKey(_page)).offset.dx, 0);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+
+    testWidgets('on macOS the edge swipe is on, for the mouse too, as '
+        "Material's route there has it", (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      try {
+        _phone(tester);
+        await tester.pumpWidget(_app());
+        await tester.pump(const Duration(milliseconds: 300));
+        await _push(tester);
+        final mouse = await tester.startGesture(
+          const Offset(4, 400),
+          kind: PointerDeviceKind.mouse,
+        );
+        for (var i = 0; i < 10; i++) {
+          await mouse.moveBy(const Offset(30, 0));
+          await tester.pump(_frame);
+        }
+        await mouse.up();
+        await tester.pumpAndSettle();
+        expect(find.byKey(_page), findsNothing);
+        await tester.pumpWidget(const SizedBox.shrink());
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
     });
 
     testWidgets('with reduced motion it still follows the finger, then '
@@ -746,10 +805,11 @@ void main() {
       await tester.pump();
       await tester.pump(_frame);
       await tester.pump(_frame);
-      // Arriving from the end side, as a pushed route does.
+      // Arriving from the end side, as a pushed route does: on iOS the
+      // platform's slide, not faded.
       final arriving = _painted(tester, find.byKey(_page));
       expect(arriving.offset.dx, greaterThan(0));
-      expect(arriving.opacity, lessThan(1));
+      expect(arriving.opacity, 1);
       await tester.pumpAndSettle();
       final route = ModalRoute.of(tester.element(find.byKey(_page)))!;
       expect(route, isA<UnaPageRoute<void>>());

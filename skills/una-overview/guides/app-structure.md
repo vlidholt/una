@@ -319,9 +319,11 @@ Cmd/Ctrl+B).
 
 ## Pages and routes
 
-`UnaApp` pushes `UnaPageRoute`s: a short slide and fade on the
-theme's motion, from the end edge on a phone. Push one yourself the usual
-way:
+`UnaApp` pushes `UnaPageRoute`s. On iOS and macOS, on a phone or a
+tablet, that is the platform's push, as Material's route draws it there:
+the page slides the whole width in, and the one under it moves a third
+aside. Elsewhere it is a short slide and fade on the theme's motion, from
+the end edge on a phone. Push one yourself the usual way:
 
 ```dart
 Navigator.of(context).push(
@@ -330,11 +332,16 @@ Navigator.of(context).push(
 ```
 
 - A pushed page has its own `Scaffold` and `AppBar`; the bar shows the
-  back button by itself.
+  back button by itself. On Liquid Glass the bar does not move with the
+  page: it stays in place and turns into the next page's — titles
+  crossing, capsules growing or shrinking to the next buttons, the back
+  button materializing — as iOS 26's does, and a swipe back carries it
+  with the finger. A filled bar moves with its page, as Material's
+  does.
 - `fullscreenDialog: true` slides the page up and gives its bar a close
   button: a compose screen, a search on a phone.
-- Back gestures are on: a drag from the start edge on iOS, the predictive
-  back preview on Android. `backGesture: false` turns them off for one
+- Back gestures are on: a drag from the start edge on iOS and macOS (the
+  mouse too, on a Mac), the predictive back preview on Android. `backGesture: false` turns them off for one
   route. `UnaPage` is the same route for a declarative page list
   (`Navigator.pages`, a router).
 - A list and the detail of what is chosen in it is a `ListDetailLayout`

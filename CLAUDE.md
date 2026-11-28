@@ -325,6 +325,18 @@ componentTheme.liquidGlass)` at build: never a window width, never cached.
   (`UnlessEdgeClaimed`) takes no hit while one is made. Asked at hit
   test: nothing rebuilds when pages come and go. Its own route's
   `canPopOf` cannot tell: a shell's route never pops.
+- **A Liquid Glass toolbar is a `Hero`** (`app_bar_morph.dart`,
+  internal), tagged with its navigator, carrying its raw parts
+  (`BarMorphData`: leading, title, actions before they go on capsules).
+  The flight draws one `AppBarToolbar` in place: one capsule per end whose
+  content is a `_CrossSize` (both children laid out, the box eased between
+  their sizes, each faded), a capsule only one side has faded through
+  `BackdropFadeHost` and scaled, titles crossed at the middle. Only the
+  toolbar flies; the edge and a `bottom` row go with their page. A nested
+  navigator needs a `HeroController` (go_router's shells have one); a
+  filled bar is no hero. On iOS and macOS at the phone and tablet form
+  factors the route itself is the platform's whole-width slide
+  (`_slidesIn`), the page under it a third aside.
 - **A large bar settles** (`_settleLarge`) when the scroll stops part
   way, by `ScrollPosition.animateTo`; a glass bar with a `bottom` keeps
   its edge at rest.

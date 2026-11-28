@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:una/src/components/app_bar_layout.dart';
+import 'package:una/src/components/app_bar_morph.dart';
 import 'package:una/src/liquid_glass/liquid_glass_theme.dart';
 import 'package:una/src/theme/components/app_bar.dart';
 import 'package:una/src/theme/motion.dart';
@@ -225,6 +226,10 @@ class AppBar extends StatelessWidget {
     var effectiveActions = automaticallyImplyActions
         ? impliedActions(context, actions)
         : actions;
+    // The parts before they go on capsules, for the bar's flight to the
+    // next page's on Liquid Glass.
+    final rawLeading = effectiveLeading;
+    final rawActions = effectiveActions;
     if (liquid) {
       (effectiveLeading, effectiveActions) = liquidGlassBarSlots(
         context,
@@ -234,19 +239,40 @@ class AppBar extends StatelessWidget {
         leadingIsButton: implied != null,
       );
     }
-    final toolbar = AppBarToolbar(
+    final buttonVariant = appBarButtonVariant(material: material);
+    final centered = centerTitle ?? bar.centerTitle ?? false;
+    Widget toolbar = AppBarToolbar(
       height: toolbarHeight,
       leading: effectiveLeading,
-      buttonVariant: appBarButtonVariant(material: material),
+      buttonVariant: buttonVariant,
       title: title,
       middle: middle,
       actions: effectiveActions,
-      centerTitle: centerTitle ?? bar.centerTitle ?? false,
+      centerTitle: centered,
       padding: padding,
       maxWidth: maxWidth,
       gap: gap,
       actionsGap: actionsGap,
     );
+    // On Liquid Glass the toolbar stays in place between two pages and
+    // turns into the next page's, as iOS 26's does.
+    if (liquid && middle == null) {
+      toolbar = BarMorph(
+        data: BarMorphData(
+          height: toolbarHeight,
+          leading: rawLeading,
+          title: title,
+          actions: rawActions,
+          buttonVariant: buttonVariant,
+          centerTitle: centered,
+          padding: padding,
+          maxWidth: maxWidth,
+          gap: gap,
+          actionsGap: actionsGap,
+        ),
+        child: toolbar,
+      );
+    }
     final content = bottom == null
         ? toolbar
         : Column(
