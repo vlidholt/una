@@ -65,8 +65,9 @@ class ProgressRing extends StatefulWidget {
   /// The ring's diameter. Defaults to 40.
   final double? size;
 
-  /// The thickness of the ring. Defaults to a tenth of [size], between 2
-  /// and 6.
+  /// The thickness of the ring. Defaults to a tenth of [size] on a large
+  /// ring, at most 6; below 30 points the line keeps its weight — 3 points
+  /// — and only a very small ring thins with it, as a `Spinner` does.
   final double? strokeWidth;
 
   /// The colour of the arc. Defaults to the progress bar theme's.
@@ -213,7 +214,9 @@ class _ProgressRingState extends State<ProgressRing>
     final theme = Theme.of(context);
     final bar = theme.progressBarTheme;
     final size = widget.size ?? 40.0;
-    final strokeWidth = widget.strokeWidth ?? (size / 10).clamp(2.0, 6.0);
+    // The spinner's rule — a line that keeps its weight on a small ring —
+    // up to 6 on a large one.
+    final strokeWidth = widget.strokeWidth ?? math.min(ringStrokeFor(size), 6);
     final value = widget.value;
 
     return progressSemantics(

@@ -823,6 +823,11 @@ was measured from (Strand, until it moved), is its own repository,
   the flick; it closes without bounce now, and never draws past shut.
 - **An indeterminate `ProgressRing` grows and shrinks while it turns**, as
   Material's does, instead of turning a fixed arc.
+- **A small ring keeps its line's weight.** The default stroke of a
+  `Spinner` and a `ProgressRing` is a tenth of the ring from 30 points up
+  and 3 points below that, thinning with the ring only when it is very
+  small (a sixth of it): a 16-point spinner drew a 2-point line, fainter
+  than the text beside it.
 - **A filled bar has room around its buttons.** A phone's toolbar was
   44, iOS's height for a bar of bare glyphs, and una's 44-point buttons
   filled it: the hover and press disc met the bar's edges. A filled bar's

@@ -367,7 +367,8 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
       expect(painter.arc().start, isNot(first.start));
       expect(painter.arc().sweep, isNot(first.sweep));
-      expect(painter.strokeWidth, 2);
+      // A 16-point ring keeps a heavier line than a tenth of its size.
+      expect(painter.strokeWidth, moreOrLessEquals(16 / 6));
     });
   });
 }

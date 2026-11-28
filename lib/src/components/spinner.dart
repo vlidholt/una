@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/widgets.dart';
 import 'package:una/src/components/ring_painter.dart';
 import 'package:una/src/components/spinner_painters.dart';
@@ -140,7 +138,9 @@ class Spinner extends StatefulWidget {
 
   /// {@template Spinner.strokeWidth}
   /// The thickness of the ring variant's arc. Defaults to a tenth of the
-  /// size, and never less than 2.
+  /// size from 30 points up; below that the line keeps its weight — 3
+  /// points — as the ring shrinks, and only a very small ring (under about
+  /// 18 points) thins with it, to a sixth of its size.
   /// {@endtemplate}
   final double? strokeWidth;
 
@@ -311,7 +311,7 @@ class _SpinnerState extends State<Spinner> with SingleTickerProviderStateMixin {
         strokeWidth:
             widget.strokeWidth ??
             spinnerTheme.strokeWidth ??
-            math.max(2, effectiveSize / 10),
+            ringStrokeFor(effectiveSize),
         arc: _arc,
         opacity: _still == _Stillness.breathing ? _opacity : null,
         repaint: _clock,

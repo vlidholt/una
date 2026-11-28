@@ -106,6 +106,13 @@ class RingPainter extends CustomPainter {
       oldDelegate.opacity != opacity;
 }
 
+/// The default line of a ring — a `Spinner`, a `ProgressRing` — [size]
+/// points across: a tenth of it
+/// on a large ring, the same 3 points on a smaller one — a line that thins
+/// with the ring reads as fainter than the text beside it — and a sixth of
+/// it on a very small one, where 3 points would fill the ring.
+double ringStrokeFor(double size) => math.max(size / 10, math.min(size / 6, 3));
+
 /// One grow-and-shrink of the indeterminate arc ([indeterminateArc]): the
 /// head runs ahead for the first half, the tail catches up in the second.
 const indeterminateArcCycle = Duration(milliseconds: 1333);

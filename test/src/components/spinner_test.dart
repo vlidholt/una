@@ -75,13 +75,23 @@ void main() {
         ),
       );
       var ring = _painterOf(tester) as RingPainter;
-      expect(ring.strokeWidth, 2);
+      // A small ring keeps its line's weight: a sixth of 16, not a tenth.
+      expect(ring.strokeWidth, moreOrLessEquals(16 / 6));
       expect(ring.color, const Color(0xff336699));
       expect(ring.trackColor.a, moreOrLessEquals(.2, epsilon: .01));
 
       await tester.pumpWidget(_app(const Spinner(size: 48)));
       ring = _painterOf(tester) as RingPainter;
       expect(ring.strokeWidth, moreOrLessEquals(4.8));
+    });
+
+    test('the line keeps its weight as the ring shrinks, until it is very '
+        'small', () {
+      expect(ringStrokeFor(56), moreOrLessEquals(5.6));
+      expect(ringStrokeFor(30), moreOrLessEquals(3));
+      expect(ringStrokeFor(24), 3);
+      expect(ringStrokeFor(18), 3);
+      expect(ringStrokeFor(12), moreOrLessEquals(2));
     });
 
     testWidgets('the named constructors and the theme choose the variant', (
